@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="NavegaClaro convierte interfaces complejas en recorridos claros, paso a paso, con IA." />
+  <title>NavegaClaro AI — La web, adaptada a tu objetivo</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="NavegaClaro, inicio">
+      <span class="brand-mark">N</span>
+      <span>NavegaClaro</span>
+    </a>
+    <nav aria-label="Navegación principal">
+      <a href="#demo">Demo</a>
+      <a href="#evidence">Evidencia</a>
+      <a href="#how">Cómo funciona</a>
+    </nav>
+    <a class="button button-ghost" href="/navegaclaro-extension.zip">Extensión</a>
+  </header>
+
+  <main id="top">
+    <section class="hero section-shell">
+      <div class="eyebrow">Accesibilidad cognitiva + IA</div>
+      <h1>No te adaptes a la interfaz.<br><span>Que la interfaz se adapte a vos.</span></h1>
+      <p class="hero-copy">Decí qué querés hacer. NavegaClaro identifica el recorrido mínimo y convierte una página sobrecargada en instrucciones claras, una acción por vez.</p>
+      <div class="hero-actions">
+        <a class="button button-primary" href="#demo">Probar demo</a>
+        <a class="button button-secondary" href="#how">Ver arquitectura</a>
+      </div>
+      <div class="proof-strip" aria-label="Principios del producto">
+        <span>Objetivo en lenguaje natural</span>
+        <span>DOM estructurado, no screenshots</span>
+        <span>Fallback si la IA falla</span>
+        <span>Sin leer valores ingresados</span>
+      </div>
+    </section>
+
+    <section id="demo" class="demo-section section-shell">
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">Demo funcional</div>
+          <h2>De una página ruidosa a un recorrido claro.</h2>
+        </div>
+        <p>Este portal es deliberadamente complejo para probar el motor. El análisis usa el endpoint real de NavegaClaro; si la API de IA no está configurada, entra en modo resiliente.</p>
+      </div>
+
+      <div class="demo-grid">
+        <aside class="clarity-console" aria-label="Panel NavegaClaro">
+          <div class="console-head">
+            <span class="status-dot" aria-hidden="true"></span>
+            <span>NavegaClaro</span>
+            <span id="engineBadge" class="badge">Listo</span>
+          </div>
+          <label for="goalInput">¿Qué querés hacer?</label>
+          <textarea id="goalInput" rows="3">Quiero sacar un turno con dermatología</textarea>
+          <button id="simplifyBtn" class="button button-primary button-block">Simplificar esta página</button>
+          <button id="resetBtn" class="button button-ghost button-block">Restaurar</button>
+          <p id="privacyNote" class="microcopy">Privacidad: no enviamos lo que escribís en campos del formulario; solo etiquetas, roles y texto visible.</p>
+          <div id="guide" class="guide" hidden>
+            <div class="guide-meta">
+              <span id="stepCounter">Paso 1</span>
+              <span id="confidence"></span>
+            </div>
+            <h3 id="guideTitle"></h3>
+            <p id="guideWhy"></p>
+            <div class="guide-actions">
+              <button id="prevStep" class="button button-ghost">Anterior</button>
+              <button id="nextStep" class="button button-primary">Siguiente</button>
+            </div>
+          </div>
+        </aside>
+
+        <div id="portal" class="portal" aria-label="Portal de turnos de demostración">
+          <div class="portal-alert">Nueva credencial digital disponible. Actualizá tus datos antes del 30/09.</div>
+          <div class="portal-header">
+            <div>
+              <strong>Salud Central</strong>
+              <span>Portal de pacientes</span>
+            </div>
+            <div class="portal-user">DD</div>
+          </div>
+          <div class="portal-layout">
+            <nav class="portal-nav" aria-label="Portal de pacientes">
+              <button>Inicio</button>
+              <button>Mi perfil</button>
+              <button>Resultados</button>
+              <button>Recetas</button>
+              <button>Autorizaciones</button>
+              <button>Facturación</button>
+              <button>Beneficios</button>
+            </nav>
+            <div class="portal-content">
+              <div class="portal-breadcrumb">Inicio / Gestiones / Atención ambulatoria / Solicitudes</div>
+              <div class="portal-card portal-banner">
+                <div>
+                  <small>Programa preventivo</small>
+                  <h3>Chequeo anual 2026</h3>
+                  <p>Conocé estudios incluidos, requisitos y centros disponibles.</p>
+                </div>
+                <button>Ver programa</button>
+              </div>
+              <div class="portal-row">
+                <div class="portal-card portal-main-card">
+                  <div class="portal-title-row">
+                    <div>
+                      <small>Gestiones</small>
+                      <h3>Solicitar turno</h3>
+                    </div>
+                    <span class="portal-chip">Online</span>
+                  </div>
+                  <p class="portal-help">Completá la información solicitada. La disponibilidad depende de tu plan y de la sede seleccionada.</p>
+                  <div class="form-grid">
+                    <label>Especialidad
+                      <select id="especialidad">
+                        <option value="">Seleccionar</option>
+                        <option>Clínica médica</option>
+                        <option>Dermatología</option>
+                        <option>Oftalmología</option>
+                      </select>
+                    </label>
+                    <label>Profesional
+                      <select id="profesional">
+                        <option value="">Seleccionar</option>
+                        <option>Dra. Paula Gómez</option>
+                        <option>Dr. Martín Ruiz</option>
+                      </select>
+                    </label>
+                    <label>Sede
+                      <select id="sede">
+                        <option>Centro</option>
+                        <option>Norte</option>
+                      </select>
+                    </label>
+                    <label>Fecha
+                      <input id="fecha" type="date" />
+                    </label>
+                  </div>
+                  <div class="portal-terms">
+                    <label><input type="checkbox" /> Acepto recibir recordatorios y comunicaciones administrativas.</label>
+                  </div>
+                  <div class="portal-actions">
+                    <button class="portal-secondary">Guardar borrador</button>
+                    <button id="buscarTurnos" class="portal-primary">Buscar horarios</button>
+                  </div>
+                </div>
+                <aside class="portal-side">
+                  <div class="portal-card">
+                    <h4>Accesos rápidos</h4>
+                    <a href="#">Cartilla médica</a>
+                    <a href="#">Telemedicina</a>
+                    <a href="#">Centros de atención</a>
+                    <a href="#">Preguntas frecuentes</a>
+                  </div>
+                  <div class="portal-card ad-card">
+                    <small>Beneficio del mes</small>
+                    <strong>20% en ópticas adheridas</strong>
+                    <a href="#">Conocer condiciones</a>
+                  </div>
+                </aside>
+              </div>
+            </div>
+          </div>
+          <div class="portal-chat">¿Necesitás ayuda?</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="evidence" class="evidence section-shell">
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">Problema real</div>
+          <h2>Diseñado sobre necesidades documentadas de accesibilidad cognitiva.</h2>
+        </div>
+        <p>La evidencia de usuario de CoderCup se incorporará con tests reales. Hasta entonces, el proyecto no inventa métricas ni testimonios.</p>
+      </div>
+      <div class="evidence-grid">
+        <article>
+          <span class="evidence-num">01</span>
+          <h3>Pasos claros</h3>
+          <p>Una instrucción por vez, con progreso visible y lenguaje directo.</p>
+        </article>
+        <article>
+          <span class="evidence-num">02</span>
+          <h3>Menos carga visual</h3>
+          <p>Resalta lo relevante y reduce el peso perceptual del contenido secundario.</p>
+        </article>
+        <article>
+          <span class="evidence-num">03</span>
+          <h3>Adaptación por objetivo</h3>
+          <p>El mismo sitio puede mostrar recorridos distintos según lo que la persona necesita hacer.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="how" class="how section-shell">
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">Arquitectura</div>
+          <h2>IA que toma decisiones accionables, no un chatbot.</h2>
+        </div>
+      </div>
+      <ol class="flow">
+        <li><span>1</span><div><strong>Captura segura</strong><p>Extrae estructura visible e interactiva. No captura valores escritos ni contraseñas.</p></div></li>
+        <li><span>2</span><div><strong>IDs controlados</strong><p>La extensión asigna IDs antes de llamar al modelo. El LLM elige entre IDs existentes: no inventa selectores CSS.</p></div></li>
+        <li><span>3</span><div><strong>Salida estructurada</strong><p>Groq GPT-OSS 120B devuelve un JSON Schema estricto que validamos antes de usar.</p></div></li>
+        <li><span>4</span><div><strong>Guía ejecutable</strong><p>El navegador hace scroll, resalta el control y mantiene una instrucción a la vez.</p></div></li>
+      </ol>
+    </section>
+  </main>
+
+  <footer class="footer section-shell">
+    <strong>NavegaClaro AI</strong>
+    <span>Prototype for CoderCup 2026 · MVP</span>
+  </footer>
+
+  <script src="/app.js" type="module"></script>
+</body>
+</html>
