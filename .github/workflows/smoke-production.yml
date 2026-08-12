@@ -9,22 +9,31 @@ jobs:
   verify-production:
     runs-on: ubuntu-latest
     steps:
-      - name: Wait for Vercel and verify health
+      - name: Wait for Vercel, verify Groq and run a real inference
         shell: bash
         run: |
           set -u
-          URL="https://navegaclaro-codercup-live-2026.vercel.app/api/health"
+          BASE="https://navegaclaro-codercup-live-2026.vercel.app"
+          HEALTH="$BASE/api/health"
           for attempt in $(seq 1 18); do
-            echo "Attempt $attempt: $URL"
-            body="$(curl --fail --silent --show-error --max-time 15 "$URL" || true)"
+            echo "Health attempt $attempt: $HEALTH"
+            body="$(curl --fail --silent --show-error --max-time 15 "$HEALTH" || true)"
             if [ -n "$body" ]; then
               echo "$body"
               if HEALTH_JSON="$body" python -c "import json,os,sys; d=json.loads(os.environ['HEALTH_JSON']); sys.exit(0 if d.get('ok') is True and d.get('aiConfigured') is True and d.get('provider') == 'groq' else 1)"; then
                 echo "Production health OK: Groq configured"
-                exit 0
+                break
               fi
+            fi
+            if [ "$attempt" -eq 18 ]; then
+              echo "Production did not become healthy with Groq enabled in time." >&2
+              exit 1
             fi
             sleep 10
           done
-          echo "Production did not become healthy with Groq enabled in time." >&2
-          exit 1
+
+          payload='{"goal":"Quiero sacar un turno con dermatología","page":{"title":"Portal de pacientes","elements":[{"id":"nc_1","role":"select","text":"Especialidad"},{"id":"nc_2","role":"select","text":"Profesional"},{"id":"nc_3","role":"select","text":"Sede"},{"id":"nc_4","role":"input","text":"Fecha"},{"id":"nc_5","role":"button","text":"Buscar horarios"}]}}'
+          echo "Running real Groq inference against production..."
+          result="$(curl --fail --silent --show-error --max-time 30 -H 'Content-Type: application/json' -d "$payload" "$BASE/api/analyze")"
+          echo "$result"
+          RESULT_JSON="$result" python -c "import json,os,sys; d=json.loads(os.environ['RESULT_JSON']); ids={'nc_1','nc_2','nc_3','nc_4','nc_5'}; steps=d.get('steps') or []; ok=d.get('mode')=='ai' and d.get('provider')=='groq' and len(steps)>=1 and all(s.get('target_id') in ids for s in steps); print('Real inference OK: Groq + validated target IDs' if ok else 'Real inference validation failed'); sys.exit(0 if ok else 1)"
