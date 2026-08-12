@@ -12,9 +12,58 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Run tests
+
+      - name: Run unit tests
         run: npm test
+
+      - name: Validate JavaScript syntax
+        run: |
+          node --check api/analyze.js
+          node --check api/health.js
+          node --check lib/analyzer.js
+          node --check app.js
+          node --check extension/background.js
+          node --check extension/content.js
+          node --check extension/popup.js
+
+      - name: Validate Manifest V3 contract
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const manifest = JSON.parse(fs.readFileSync('extension/manifest.json','utf8'));
+          if (manifest.manifest_version !== 3) throw new Error('Manifest must be V3');
+          if (manifest.background?.service_worker !== 'background.js') throw new Error('Missing service worker');
+          if (!Array.isArray(manifest.content_scripts) || !manifest.content_scripts.length) throw new Error('Missing content script');
+          if (!manifest.host_permissions?.some((x) => x.includes('navegaclaro-codercup-live-2026.vercel.app'))) throw new Error('Production host permission missing');
+          console.log(`Manifest OK — v${manifest.version}`);
+          NODE
+
+      - name: Guard against committed API keys
+        run: |
+          if grep -RIE --exclude-dir=.git --exclude='*.md' 'gsk_[A-Za-z0-9_-]{15,}' .; then
+            echo 'Potential Groq API key committed to repository.' >&2
+            exit 1
+          fi
+
+  package-extension:
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build extension ZIP
+        run: zip -r navega-claro-extension-v0.3.0.zip extension -x '*.DS_Store'
+
+      - name: Upload extension artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: navega-claro-extension-v0.3.0
+          path: navega-claro-extension-v0.3.0.zip
+          retention-days: 14
