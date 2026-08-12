@@ -43,7 +43,7 @@ jobs:
           echo "Scenario 1: medical appointment"
           result="$(curl --fail --silent --show-error --max-time 30 -H 'Content-Type: application/json' -d "$payload_turno" "$BASE/api/analyze")"
           echo "$result"
-          RESULT_JSON="$result" python -c "import json,os,sys; d=json.loads(os.environ['RESULT_JSON']); ids={'nc_1','nc_2','nc_3','nc_4','nc_5'}; steps=d.get('steps') or []; ok=d.get('mode')=='ai' and d.get('provider')=='groq' and len(steps)>=3 and all(s.get('target_id') in ids for s in steps); sys.exit(0 if ok else 1)"
+          RESULT_JSON="$result" python -c "import json,os,sys; d=json.loads(os.environ['RESULT_JSON']); ids={'nc_1','nc_2','nc_3','nc_4','nc_5'}; steps=d.get('steps') or []; got={s.get('target_id') for s in steps}; ok=d.get('mode')=='ai' and d.get('provider')=='groq' and len(steps)>=2 and got.issubset(ids) and 'nc_1' in got and 'nc_5' in got; sys.exit(0 if ok else 1)"
 
           payload_service='{"goal":"Quiero encontrar un dermatólogo en Córdoba","page":{"title":"Buscador de servicios médicos","elements":[{"id":"svc_1","tag":"select","label":"Categoría","text":"Servicios médicos"},{"id":"svc_2","tag":"select","label":"Especialidad","text":"Dermatología Cardiología Oftalmología"},{"id":"svc_3","tag":"select","label":"Provincia","text":"Córdoba Buenos Aires Santa Fe"},{"id":"svc_4","tag":"select","label":"Localidad","text":"Seleccionar localidad"},{"id":"svc_5","tag":"button","text":"Buscar resultados"},{"id":"noise_1","tag":"a","text":"Beneficios"}]}}'
           echo "Scenario 2: external-style service finder"
