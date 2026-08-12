@@ -34,6 +34,15 @@ test('rechaza target ids inventados', () => {
   assert.equal(validatePlan(plan, new Set(['real'])), false);
 });
 
+test('rechaza ids duplicados para no guiar dos veces al mismo control', () => {
+  const plan = {
+    steps: [
+      { instruction: 'Primero', target_id: 'a' },
+      { instruction: 'Otra vez', target_id: 'a' }
+    ]
+  };
+  assert.equal(validatePlan(plan, new Set(['a'])), false);
+});
 
 test('fallback de turno prioriza el flujo del formulario y evita ruido', () => {
   const page = {
@@ -49,4 +58,18 @@ test('fallback de turno prioriza el flujo del formulario y evita ruido', () => {
   };
   const ids = heuristicPlan('Quiero sacar un turno con dermatología', page).steps.map((s) => s.target_id);
   assert.deepEqual(ids, ['f1', 'f2', 'f3', 'f4', 'f5']);
+});
+
+test('fallback genérico conserva el orden natural del formulario', () => {
+  const page = {
+    elements: [
+      { id: 'nav', tag: 'a', text: 'Inicio' },
+      { id: 'cat', tag: 'select', label: 'Categoría del servicio' },
+      { id: 'prov', tag: 'select', label: 'Provincia' },
+      { id: 'loc', tag: 'select', label: 'Localidad' },
+      { id: 'search', tag: 'button', text: 'Buscar resultados' }
+    ]
+  };
+  const ids = heuristicPlan('Quiero encontrar un servicio en Córdoba', page).steps.map((s) => s.target_id);
+  assert.deepEqual(ids, ['cat', 'prov', 'loc', 'search']);
 });

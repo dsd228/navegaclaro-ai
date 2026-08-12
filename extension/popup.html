@@ -8,28 +8,44 @@
 </head>
 <body>
   <main>
-    <header>
-      <span class="mark">N</span>
-      <div>
+    <header class="brand-row">
+      <span class="mark" aria-hidden="true">N</span>
+      <div class="brand-copy">
         <strong>NavegaClaro</strong>
-        <small>Comprensión</small>
+        <small>La web, paso a paso</small>
       </div>
+      <span id="serviceBadge" class="service-badge" data-state="checking">Comprobando</span>
     </header>
 
-    <label for="goal">¿Qué querés hacer en esta página?</label>
-    <textarea id="goal" rows="4" placeholder="Ej: Quiero sacar un turno"></textarea>
-    <button id="run" class="primary">Simplificar</button>
-    <button id="reset" class="secondary">Restaurar página</button>
-    <p id="status" role="status">Listo.</p>
+    <section class="intro" aria-labelledby="goalLabel">
+      <p class="eyebrow">Decí tu objetivo</p>
+      <h1 id="goalLabel">¿Qué querés hacer en esta página?</h1>
+      <p class="lead">NavegaClaro encuentra los controles relevantes y te guía una acción por vez.</p>
+    </section>
 
-    <details>
-      <summary>Configuración</summary>
-      <label class="small" for="apiUrl">Endpoint</label>
-      <input id="apiUrl" type="url" value="https://navegaclaro-codercup-live-2026.vercel.app/api/analyze" />
-      <button id="save" class="linkbutton">Guardar endpoint</button>
-    </details>
+    <label class="sr-only" for="goal">Objetivo</label>
+    <textarea id="goal" rows="4" maxlength="500" placeholder="Ej: Quiero encontrar un dermatólogo en Córdoba"></textarea>
 
-    <p class="privacy">No enviamos valores escritos en formularios. Solo estructura, etiquetas y texto visible.</p>
+    <div class="examples" aria-label="Ejemplos rápidos">
+      <button type="button" class="example" data-goal="Quiero sacar un turno">Sacar un turno</button>
+      <button type="button" class="example" data-goal="Quiero encontrar un servicio">Encontrar un servicio</button>
+      <button type="button" class="example" data-goal="Quiero pagar una factura">Pagar una factura</button>
+    </div>
+
+    <button id="run" class="primary">Guiarme paso a paso</button>
+    <button id="reset" class="secondary">Quitar guía</button>
+
+    <div id="status" class="status" role="status" aria-live="polite" data-state="idle">
+      <span class="status-dot" aria-hidden="true"></span>
+      <span id="statusText">Listo para analizar esta página.</span>
+    </div>
+
+    <div class="trust-card">
+      <strong>Vos mantenés el control.</strong>
+      <p>NavegaClaro no hace clic por vos ni envía lo que escribís en formularios. Solo usa estructura, etiquetas y texto visible necesario para encontrar el recorrido.</p>
+    </div>
+
+    <p class="shortcut">Tip: <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd> para iniciar.</p>
   </main>
   <script src="popup.js"></script>
 </body>
