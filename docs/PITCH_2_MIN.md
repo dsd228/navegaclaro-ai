@@ -1,64 +1,75 @@
 # Pitch CoderCup — 2 minutos máximo
 
-Objetivo de grabación: **1:50–1:55**, nunca 2:00 exactos.
+Objetivo de grabación: **1:45–1:55**, nunca 2:00 exactos.
 
-## 0:00–0:10 — problema
+La prioridad del video es: **problema real → transformación visible → evidencia → cierre**. La arquitectura técnica aparece solo como prueba de ejecución, no como protagonista.
 
-> “Pedir un turno debería ser simple. Pero muchas páginas mezclan navegación, banners, beneficios, formularios y decisiones al mismo tiempo. Para una persona que se distrae o se abruma con interfaces complejas, terminar una tarea puede convertirse en una barrera.”
+## 0:00–0:12 — problema real
 
-Visual: portal complejo, sin slides de introducción.
+Visual: una web pública real o el portal de demo ya abierto; nada de slide inicial.
 
-## 0:10–0:20 — propuesta
+> “Encontrar un médico o completar un trámite debería ser simple. Pero muchas interfaces obligan a procesar demasiadas opciones al mismo tiempo. Cuando una persona se distrae, se abruma o simplemente no sabe por dónde empezar, la tarea se frena.”
 
-> “NavegaClaro convierte una intención en lenguaje natural en un recorrido web claro, una acción por vez.”
+## 0:12–0:22 — propuesta
 
-Escribir:
+Mostrar NavegaClaro y escribir el objetivo.
 
-> Quiero sacar un turno con dermatología.
+> “NavegaClaro convierte lo que querés hacer en una guía clara, una acción por vez.”
+
+Ejemplo:
+
+> Quiero encontrar un dermatólogo en Córdoba.
 
 Click **Simplificar**.
 
-## 0:20–0:55 — momento wow
+## 0:22–0:58 — momento wow
 
 Dejar que aparezca el primer highlight.
 
-> “La IA entendió el objetivo, encontró los controles relevantes y construyó el camino mínimo. Ahora solo veo qué hacer primero.”
+> “La IA identifica solo los controles relevantes y construye el recorrido mínimo sobre la página real.”
 
-Completar/avanzar:
+Avanzar 3–4 pasos. No explicar código mientras ocurre la transformación.
 
-1. Especialidad.
-2. Profesional.
-3. Fecha / buscar horarios.
+## 0:58–1:22 — evidencia
 
-## 0:55–1:15 — por qué no es un wrapper
+### Si ya existen tests reales
 
-> “No le pedimos a un modelo que critique una captura ni que invente selectores. NavegaClaro asigna IDs reales al DOM, GPT-OSS 120B en Groq elige únicamente entre esos IDs y devuelve un JSON estructurado que validamos antes de guiar al usuario. Si el modelo o la red fallan, hay un modo resiliente local.”
+> “Lo probamos con cinco participantes usando tareas equivalentes y orden contrabalanceado. [DECIR SOLO RESULTADOS REALES: éxito, tiempo o errores].”
 
-Visual: diagrama DOM → IDs → Groq → JSON Schema → guía.
+Visual: máximo dos métricas grandes. Ejemplo de formato, nunca inventar números:
 
-## 1:15–1:35 — evidencia
+- Finalización: X/5 → Y/5
+- Tiempo medio: X s → Y s
 
-### Solo si ya existen tests reales
+### Si todavía no hay población objetivo específica
 
-> “Lo probamos con cinco participantes en tareas equivalentes. [DECIR ÚNICAMENTE LOS RESULTADOS REALES].”
+> “Esta primera validación mide usabilidad general. No la presentamos como evidencia clínica.”
 
-Visual: máximo dos métricas.
+## 1:22–1:32 — ejecución técnica en una frase
 
-### Si todavía no hay población objetivo
+> “No es un chatbot que explica una captura: trabaja sobre el DOM vivo, usa IDs controlados y valida cada paso antes de mostrarlo.”
 
-> “En esta primera iteración validamos usabilidad general. La validación específica con población neurodivergente es el siguiente paso; no la simulamos.”
+Visual: DOM → IDs → IA → guía. Máximo 10 segundos.
 
-## 1:35–1:50 — cierre
+## 1:32–1:50 — cierre
 
-> “La accesibilidad no debería depender de que cada sitio haya sido diseñado perfectamente. NavegaClaro agrega una capa de comprensión sobre la web que ya existe. La web, paso a paso.”
+> “NavegaClaro no hace el trámite por vos. Reduce el ruido para que puedas hacerlo vos. No obligamos a la persona a adaptarse a la interfaz; hacemos que la interfaz se adapte a su objetivo.”
 
-Visual: antes → NavegaClaro.
+Visual: antes → NavegaClaro → tarea encaminada.
+
+## Demo recomendada
+
+1. **Principal:** web pública real, sin login ni datos personales. Candidato: cartilla médica pública de PAMI.
+2. **Respaldo:** portal Salud Central del proyecto, probado 20 veces y grabado previamente.
+3. Si la web real cambia o rompe la demo, usar el respaldo sin improvisar.
 
 ## Reglas de grabación
 
-- La UI debe aparecer en los primeros 3 segundos.
+- UI visible en los primeros 3 segundos.
 - Sin presentación personal larga.
-- Sin explicar herramientas de desarrollo.
-- Sin roadmap salvo que sobre tiempo.
+- No gastar más de 10 segundos en stack técnico.
+- No mostrar roadmap.
 - Subtítulos obligatorios en el video final.
-- Cursor grande y zoom suficiente para entender la demo en móvil.
+- Cursor grande y zoom suficiente para verse desde móvil.
+- Grabar una toma de respaldo antes de la entrega.
+- Objetivo final: **que un juez entienda problema, solución y prueba sin leer el README**.
