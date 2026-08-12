@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="popup.css" />
+  <title>NavegaClaro</title>
+</head>
+<body>
+  <main>
+    <header>
+      <span class="mark">N</span>
+      <div>
+        <strong>NavegaClaro</strong>
+        <small>Comprensión</small>
+      </div>
+    </header>
+
+    <label for="goal">¿Qué querés hacer en esta página?</label>
+    <textarea id="goal" rows="4" placeholder="Ej: Quiero sacar un turno"></textarea>
+    <button id="run" class="primary">Simplificar</button>
+    <button id="reset" class="secondary">Restaurar página</button>
+    <p id="status" role="status">Listo.</p>
+
+    <details>
+      <summary>Configuración</summary>
+      <label class="small" for="apiUrl">Endpoint</label>
+      <input id="apiUrl" type="url" value="https://navegaclaro-codercup-live-2026.vercel.app/api/analyze" />
+      <button id="save" class="linkbutton">Guardar endpoint</button>
+    </details>
+
+    <p class="privacy">No enviamos valores escritos en formularios. Solo estructura, etiquetas y texto visible.</p>
+  </main>
+  <script src="popup.js"></script>
+</body>
+</html>
