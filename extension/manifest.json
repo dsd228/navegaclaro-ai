@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "NavegaClaro AI",
+  "version": "0.1.0",
+  "description": "Convierte páginas web complejas en recorridos guiados, paso a paso, según tu objetivo.",
+  "permissions": ["activeTab", "storage"],
+  "host_permissions": ["https://*.vercel.app/*"],
+  "action": {
+    "default_title": "NavegaClaro AI",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}
