@@ -1,0 +1,11 @@
+participant,order,condition,task,success,time_seconds,critical_errors,help_requests,ease_1_5,quote,notes
+P01,AB,without_navegaclaro,A,,,,,,,
+P01,AB,with_navegaclaro,B,,,,,,,
+P02,BA,with_navegaclaro,A,,,,,,,
+P02,BA,without_navegaclaro,B,,,,,,,
+P03,AB,without_navegaclaro,A,,,,,,,
+P03,AB,with_navegaclaro,B,,,,,,,
+P04,BA,with_navegaclaro,A,,,,,,,
+P04,BA,without_navegaclaro,B,,,,,,,
+P05,AB,without_navegaclaro,A,,,,,,,
+P05,AB,with_navegaclaro,B,,,,,,,
