@@ -9,31 +9,38 @@ jobs:
   verify-production:
     runs-on: ubuntu-latest
     steps:
-      - name: Wait for Vercel, verify Groq and run a real inference
+      - name: Wait for Vercel, verify Groq and run real inference scenarios
         shell: bash
         run: |
-          set -u
+          set -euo pipefail
           BASE="https://navegaclaro-codercup-live-2026.vercel.app"
           HEALTH="$BASE/api/health"
+
           for attempt in $(seq 1 18); do
             echo "Health attempt $attempt: $HEALTH"
             body="$(curl --fail --silent --show-error --max-time 15 "$HEALTH" || true)"
             if [ -n "$body" ]; then
               echo "$body"
-              if HEALTH_JSON="$body" python -c "import json,os,sys; d=json.loads(os.environ['HEALTH_JSON']); sys.exit(0 if d.get('ok') is True and d.get('aiConfigured') is True and d.get('provider') == 'groq' else 1)"; then
-                echo "Production health OK: Groq configured"
+              if HEALTH_JSON="$body" python -c "import json,os,sys; d=json.loads(os.environ['HEALTH_JSON']); ok=d.get('ok') is True and d.get('aiConfigured') is True and d.get('provider') == 'groq' and d.get('version') == '0.3.0'; sys.exit(0 if ok else 1)"; then
+                echo "Production health OK: v0.3.0 + Groq configured"
                 break
               fi
             fi
             if [ "$attempt" -eq 18 ]; then
-              echo "Production did not become healthy with Groq enabled in time." >&2
+              echo "Production did not become healthy with the expected version in time." >&2
               exit 1
             fi
             sleep 10
           done
 
-          payload='{"goal":"Quiero sacar un turno con dermatología","page":{"title":"Portal de pacientes","elements":[{"id":"nc_1","role":"select","text":"Especialidad"},{"id":"nc_2","role":"select","text":"Profesional"},{"id":"nc_3","role":"select","text":"Sede"},{"id":"nc_4","role":"input","text":"Fecha"},{"id":"nc_5","role":"button","text":"Buscar horarios"}]}}'
-          echo "Running real Groq inference against production..."
-          result="$(curl --fail --silent --show-error --max-time 30 -H 'Content-Type: application/json' -d "$payload" "$BASE/api/analyze")"
+          payload_turno='{"goal":"Quiero sacar un turno con dermatología","page":{"title":"Portal de pacientes","elements":[{"id":"nc_1","tag":"select","text":"Especialidad Dermatología Clínica médica Oftalmología"},{"id":"nc_2","tag":"select","text":"Profesional"},{"id":"nc_3","tag":"select","text":"Sede Centro Norte"},{"id":"nc_4","tag":"input","type":"date","text":"Fecha"},{"id":"nc_5","tag":"button","text":"Buscar horarios"}]}}'
+          echo "Scenario 1: medical appointment"
+          result="$(curl --fail --silent --show-error --max-time 30 -H 'Content-Type: application/json' -d "$payload_turno" "$BASE/api/analyze")"
           echo "$result"
-          RESULT_JSON="$result" python -c "import json,os,sys; d=json.loads(os.environ['RESULT_JSON']); ids={'nc_1','nc_2','nc_3','nc_4','nc_5'}; steps=d.get('steps') or []; ok=d.get('mode')=='ai' and d.get('provider')=='groq' and len(steps)>=1 and all(s.get('target_id') in ids for s in steps); print('Real inference OK: Groq + validated target IDs' if ok else 'Real inference validation failed'); sys.exit(0 if ok else 1)"
+          RESULT_JSON="$result" python -c "import json,os,sys; d=json.loads(os.environ['RESULT_JSON']); ids={'nc_1','nc_2','nc_3','nc_4','nc_5'}; steps=d.get('steps') or []; ok=d.get('mode')=='ai' and d.get('provider')=='groq' and len(steps)>=3 and all(s.get('target_id') in ids for s in steps); print('Scenario 1 OK' if ok else 'Scenario 1 failed'); sys.exit(0 if ok else 1)"
+
+          payload_service='{"goal":"Quiero encontrar un dermatólogo en Córdoba","page":{"title":"Buscador de servicios médicos","elements":[{"id":"svc_1","tag":"select","label":"Categoría","text":"Servicios médicos"},{"id":"svc_2","tag":"select","label":"Especialidad","text":"Dermatología Cardiología Oftalmología"},{"id":"svc_3","tag":"select","label":"Provincia","text":"Córdoba Buenos Aires Santa Fe"},{"id":"svc_4","tag":"select","label":"Localidad","text":"Seleccionar localidad"},{"id":"svc_5","tag":"button","text":"Buscar resultados"},{"id":"noise_1","tag":"a","text":"Beneficios"}]}}'
+          echo "Scenario 2: external-style service finder"
+          result2="$(curl --fail --silent --show-error --max-time 30 -H 'Content-Type: application/json' -d "$payload_service" "$BASE/api/analyze")"
+          echo "$result2"
+          RESULT_JSON="$result2" python -c "import json,os,sys; d=json.loads(os.environ['RESULT_JSON']); ids={'svc_1','svc_2','svc_3','svc_4','svc_5'}; got={s.get('target_id') for s in (d.get('steps') or [])}; ok=d.get('mode')=='ai' and d.get('provider')=='groq' and len(got)>=3 and got.issubset(ids) and 'svc_2' in got and 'svc_3' in got and 'svc_5' in got; print('Scenario 2 OK' if ok else f'Scenario 2 failed: {got}'); sys.exit(0 if ok else 1)"

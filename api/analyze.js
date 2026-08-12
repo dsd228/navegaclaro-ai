@@ -43,10 +43,19 @@ const schema = {
   additionalProperties: false
 };
 
+const RATE_WINDOW_MS = 60_000;
+const RATE_MAX = 18;
+const buckets = globalThis.__navegaClaroRateBuckets || new Map();
+globalThis.__navegaClaroRateBuckets = buckets;
+
 export default async function handler(req, res) {
   setCors(res);
   if (req.method === 'OPTIONS') return res.status(204).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  if (!allowRequest(req, res)) return;
+  const declaredLength = Number(req.headers?.['content-length'] || 0);
+  if (declaredLength > 180_000) return res.status(413).json({ error: 'La página enviada es demasiado grande.' });
 
   const startedAt = Date.now();
   try {
@@ -56,6 +65,7 @@ export default async function handler(req, res) {
 
     const page = redactPage(body.page || {});
     const validIds = new Set(page.elements.filter((el) => !el.disabled).map((el) => el.id).filter(Boolean));
+    if (!validIds.size) return res.status(200).json({ ...heuristicPlan(goal, page), processingMs: Date.now() - startedAt });
 
     if (!process.env.GROQ_API_KEY) {
       return res.status(200).json({ ...heuristicPlan(goal, page), processingMs: Date.now() - startedAt });
@@ -126,6 +136,33 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'No se pudo analizar la página.' });
     }
   }
+}
+
+function allowRequest(req, res) {
+  const now = Date.now();
+  const key = clientKey(req);
+  const previous = (buckets.get(key) || []).filter((time) => now - time < RATE_WINDOW_MS);
+  if (previous.length >= RATE_MAX) {
+    res.setHeader('Retry-After', '60');
+    res.status(429).json({ error: 'Demasiadas solicitudes. Esperá un minuto y volvé a intentar.' });
+    return false;
+  }
+  previous.push(now);
+  buckets.set(key, previous);
+
+  if (buckets.size > 500) {
+    for (const [bucketKey, times] of buckets.entries()) {
+      const live = times.filter((time) => now - time < RATE_WINDOW_MS);
+      if (live.length) buckets.set(bucketKey, live);
+      else buckets.delete(bucketKey);
+    }
+  }
+  return true;
+}
+
+function clientKey(req) {
+  const forwarded = String(req.headers?.['x-forwarded-for'] || '').split(',')[0].trim();
+  return forwarded || String(req.headers?.['x-real-ip'] || 'unknown');
 }
 
 function setCors(res) {
