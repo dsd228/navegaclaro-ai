@@ -24,9 +24,11 @@ jobs:
       - name: Validate JavaScript syntax
         run: |
           node --check api/analyze.js
+          node --check api/evidence.js
           node --check api/health.js
           node --check lib/analyzer.js
           node --check app.js
+          node --check test-lab.js
           node --check extension/background.js
           node --check extension/content.js
           node --check extension/popup.js
@@ -42,6 +44,15 @@ jobs:
           if (!manifest.host_permissions?.some((x) => x.includes('navegaclaro-codercup-live-2026.vercel.app'))) throw new Error('Production host permission missing');
           console.log(`Manifest OK — v${manifest.version}`);
           NODE
+
+      - name: Validate evidence assets
+        run: |
+          test -f google-apps-script/Code.gs
+          grep -q 'GOOGLE_SHEETS_WEBAPP_URL' api/evidence.js
+          grep -q 'EVIDENCE_ADMIN_TOKEN' api/evidence.js
+          grep -q 'TEST_USUARIOS' google-apps-script/Code.gs
+          grep -q 'SESIONES' google-apps-script/Code.gs
+          grep -q 'QA' google-apps-script/Code.gs
 
       - name: Guard against committed API keys
         run: |

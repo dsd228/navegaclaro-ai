@@ -1,185 +1,42 @@
-const portal = document.querySelector('#portal');
-const goalInput = document.querySelector('#goalInput');
-const simplifyBtn = document.querySelector('#simplifyBtn');
-const resetBtn = document.querySelector('#resetBtn');
-const guide = document.querySelector('#guide');
-const stepCounter = document.querySelector('#stepCounter');
-const confidence = document.querySelector('#confidence');
-const guideTitle = document.querySelector('#guideTitle');
-const guideWhy = document.querySelector('#guideWhy');
-const prevStep = document.querySelector('#prevStep');
-const nextStep = document.querySelector('#nextStep');
-const engineBadge = document.querySelector('#engineBadge');
+const portal=document.querySelector('#portal');const goalInput=document.querySelector('#goalInput');const simplifyBtn=document.querySelector('#simplifyBtn');const resetBtn=document.querySelector('#resetBtn');const guide=document.querySelector('#guide');const stepCounter=document.querySelector('#stepCounter');const confidence=document.querySelector('#confidence');const guideTitle=document.querySelector('#guideTitle');const guideWhy=document.querySelector('#guideWhy');const prevStep=document.querySelector('#prevStep');const nextStep=document.querySelector('#nextStep');const engineBadge=document.querySelector('#engineBadge');
+let plan=null;let stepIndex=0;let tagged=[];let currentSessionId=null;
 
-let plan = null;
-let stepIndex = 0;
-let tagged = [];
+document.querySelectorAll('[data-goal]').forEach((button)=>button.addEventListener('click',()=>{goalInput.value=button.dataset.goal||'';goalInput.focus();}));
+simplifyBtn?.addEventListener('click',analyzePortal);resetBtn?.addEventListener('click',resetGuide);prevStep?.addEventListener('click',()=>showStep(stepIndex-1));nextStep?.addEventListener('click',()=>{if(!plan)return;if(stepIndex>=plan.steps.length-1){trackCompletion();resetGuide();return;}showStep(stepIndex+1);});
 
-simplifyBtn.addEventListener('click', analyzePortal);
-resetBtn.addEventListener('click', resetGuide);
-prevStep.addEventListener('click', () => showStep(stepIndex - 1));
-nextStep.addEventListener('click', () => {
-  if (!plan) return;
-  if (stepIndex >= plan.steps.length - 1) {
-    resetGuide();
-    return;
-  }
-  showStep(stepIndex + 1);
-});
+boot();
+async function boot(){await Promise.allSettled([loadSystemHealth(),loadEvidence()]);}
 
-async function analyzePortal() {
-  const goal = goalInput.value.trim();
-  if (!goal) {
-    goalInput.focus();
-    return;
-  }
+async function loadSystemHealth(){const ai=document.querySelector('#systemAi');const evidence=document.querySelector('#systemEvidence');const note=document.querySelector('#systemNote');try{const response=await fetch('/api/health',{cache:'no-store'});if(!response.ok)throw new Error(`HTTP ${response.status}`);const data=await response.json();if(ai)ai.textContent=data.aiConfigured?'Groq · online':'Modo resiliente';if(evidence)evidence.textContent=data.evidenceConfigured?'Sheets · conectado':'Sheets · pendiente';if(note)note.textContent=`Producción ${data.version||''} verificada.`.trim();}catch{if(ai)ai.textContent='Disponible con fallback';if(evidence)evidence.textContent='Pendiente';if(note)note.textContent='No se pudo consultar el healthcheck; la demo mantiene fallback local.';}}
 
-  resetHighlights();
-  simplifyBtn.disabled = true;
-  simplifyBtn.textContent = 'Analizando…';
-  engineBadge.textContent = 'Procesando';
+async function loadEvidence(){const source=document.querySelector('#evidenceSource');try{const response=await fetch('/api/evidence',{cache:'no-store'});if(!response.ok)throw new Error(`HTTP ${response.status}`);const data=await response.json();if(!data.configured||!data.metrics){renderEmptyEvidence();if(source)source.textContent='Google Sheets preparado · aún sin conexión';return;}renderEvidence(data.metrics);if(source)source.textContent='Datos reales · Google Sheets';}catch{renderEmptyEvidence();if(source)source.textContent='Evidencia temporalmente no disponible';}}
 
-  const page = extractPage(portal);
-  try {
-    const response = await fetch('/api/analyze', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ goal, page })
-    });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    plan = await response.json();
-    if (!Array.isArray(plan.steps) || !plan.steps.length) throw new Error('Plan vacío');
-    stepIndex = 0;
-    portal.classList.add('clarity-active');
-    guide.hidden = false;
-    engineBadge.textContent = plan.mode === 'ai' ? 'IA activa' : 'Resiliente';
-    showStep(0);
-  } catch (error) {
-    plan = clientFallback(goal, page);
-    stepIndex = 0;
-    portal.classList.add('clarity-active');
-    guide.hidden = false;
-    engineBadge.textContent = 'Resiliente local';
-    showStep(0);
-  } finally {
-    simplifyBtn.disabled = false;
-    simplifyBtn.textContent = 'Simplificar esta página';
-  }
-}
+function renderEvidence(metrics){const before=metrics.without||{};const after=metrics.with||{};setText('metricParticipants',formatInt(metrics.participants));setText('metricParticipantsNote',metrics.participants?`${metrics.testRows||0} registros de prueba`:'Esperando pruebas');setText('metricSuccessBefore',formatPct(before.successRate));setText('metricSuccessAfter',formatPct(after.successRate));setText('metricTimeBefore',formatSeconds(before.avgTime));setText('metricTimeAfter',formatSeconds(after.avgTime));setText('metricErrors',`${formatInt(before.errors)} / ${formatInt(after.errors)}`);const empty=document.querySelector('#evidenceEmpty');if(empty&&metrics.participants>0)empty.hidden=true;}
+function renderEmptyEvidence(){['metricParticipants','metricSuccessBefore','metricSuccessAfter','metricTimeBefore','metricTimeAfter','metricErrors'].forEach((id)=>setText(id,'—'));setText('metricParticipantsNote','Esperando pruebas reales');const empty=document.querySelector('#evidenceEmpty');if(empty)empty.hidden=false;}
+function setText(id,value){const el=document.getElementById(id);if(el)el.textContent=value;}
+function formatPct(value){return Number.isFinite(Number(value))?`${Math.round(Number(value))}%`:'—';}
+function formatInt(value){return Number.isFinite(Number(value))?String(Math.round(Number(value))):'—';}
+function formatSeconds(value){return Number.isFinite(Number(value))?String(Math.round(Number(value))):'—';}
 
-function extractPage(root) {
-  tagged = [];
-  const candidates = [...root.querySelectorAll('button,a,input,select,textarea,[role="button"],[role="link"],[tabindex]')]
-    .filter(isVisible)
-    .slice(0, 120);
+async function analyzePortal(){const goal=goalInput.value.trim();if(!goal){goalInput.focus();return;}resetHighlights();simplifyBtn.disabled=true;simplifyBtn.textContent='Analizando…';engineBadge.textContent='Procesando';const page=extractPage(portal);const started=performance.now();try{const response=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({goal,page})});if(!response.ok)throw new Error(`HTTP ${response.status}`);plan=await response.json();if(!Array.isArray(plan.steps)||!plan.steps.length)throw new Error('Plan vacío');stepIndex=0;portal.classList.add('clarity-active');guide.hidden=false;engineBadge.textContent=plan.mode==='ai'?'IA activa':'Resiliente';showStep(0);currentSessionId=createSessionId();trackGuideCreated({goal,page,latencyMs:Math.round(performance.now()-started)});}catch{plan=clientFallback(goal,page);stepIndex=0;portal.classList.add('clarity-active');guide.hidden=false;engineBadge.textContent='Resiliente local';showStep(0);currentSessionId=createSessionId();trackGuideCreated({goal,page,latencyMs:Math.round(performance.now()-started)});}finally{simplifyBtn.disabled=false;simplifyBtn.textContent='Simplificar esta página';}}
 
-  const elements = candidates.map((el, index) => {
-    const id = `cl-demo-${index + 1}`;
-    el.dataset.clId = id;
-    tagged.push(el);
-    const label = getLabel(el);
-    return {
-      id,
-      tag: el.tagName.toLowerCase(),
-      role: el.getAttribute('role') || '',
-      type: el.getAttribute('type') || '',
-      label,
-      text: clean(el.innerText || el.textContent || ''),
-      placeholder: el.getAttribute('placeholder') || '',
-      name: el.getAttribute('name') || '',
-      context: clean(el.closest('label,fieldset,.portal-card')?.innerText || '').slice(0, 220),
-      disabled: Boolean(el.disabled)
-    };
-  });
+function extractPage(root){tagged=[];const candidates=[...root.querySelectorAll('button,a,input,select,textarea,[role="button"],[role="link"],[tabindex]')].filter(isVisible).filter((el)=>!isSensitive(el)).slice(0,120);const elements=candidates.map((el,index)=>{const id=`cl-demo-${index+1}`;el.dataset.clId=id;tagged.push(el);return{id,tag:el.tagName.toLowerCase(),role:el.getAttribute('role')||'',type:el.getAttribute('type')||'',label:getLabel(el),text:clean(el.innerText||el.textContent||'').slice(0,220),placeholder:clean(el.getAttribute('placeholder')||'').slice(0,160),name:clean(el.getAttribute('name')||'').slice(0,100),context:clean(el.closest('label,fieldset,.portal-card')?.innerText||'').slice(0,260),disabled:Boolean(el.disabled)};});return{title:'Salud Central — Portal de pacientes',url:`${location.origin}/demo/portal-turnos`,text:clean(root.innerText).replace(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/g,'[email]').replace(/\b\d{7,}\b/g,'[numero]').slice(0,10000),elements};}
+function isSensitive(el){const type=String(el.getAttribute('type')||'').toLowerCase();const joined=normalize(`${type} ${el.getAttribute('name')||''} ${el.getAttribute('autocomplete')||''} ${el.getAttribute('aria-label')||''}`);return ['password','hidden'].includes(type)||/(otp|one time|tarjeta|card number|cvv|cvc|security code)/.test(joined);}
 
-  return {
-    title: 'Salud Central — Portal de pacientes',
-    url: `${location.origin}/demo/portal-turnos`,
-    text: clean(root.innerText).slice(0, 10000),
-    elements
-  };
-}
+function showStep(nextIndex){if(!plan)return;stepIndex=Math.max(0,Math.min(nextIndex,plan.steps.length-1));const step=plan.steps[stepIndex];resetHighlights();let target=portal.querySelector(`[data-cl-id="${cssEscape(step.target_id)}"]`);if(!target&&step.target_text)target=findByText(step.target_text);if(target){target.classList.add('clarity-target');target.scrollIntoView({behavior:'smooth',block:'center',inline:'nearest'});if(['focus','type','select'].includes(step.action))setTimeout(()=>{try{target.focus({preventScroll:true});}catch{}},350);}stepCounter.textContent=`Paso ${stepIndex+1} de ${plan.steps.length}`;confidence.textContent=`${Math.round((plan.confidence||0)*100)}% confianza`;guideTitle.textContent=step.instruction;guideWhy.textContent=target?(step.why||plan.summary||''):`${step.why||''} El control cambió, pero podés continuar con la instrucción.`;prevStep.disabled=stepIndex===0;nextStep.textContent=stepIndex===plan.steps.length-1?'Finalizar':'Siguiente';}
+function findByText(targetText){const wanted=normalize(targetText);if(!wanted)return null;let best=null,bestScore=0;for(const el of tagged){if(!isVisible(el))continue;const text=normalize(`${getLabel(el)} ${el.innerText||el.textContent||''}`);const score=similarity(wanted,text);if(score>bestScore){bestScore=score;best=el;}}return bestScore>=.3?best:null;}
+function similarity(a,b){if(!a||!b)return 0;if(a.includes(b)||b.includes(a))return .95;const aa=new Set(a.split(' ').filter(Boolean));const bb=new Set(b.split(' ').filter(Boolean));let common=0;aa.forEach((token)=>{if(bb.has(token))common++;});return common/Math.max(aa.size,1);}
 
-function showStep(nextIndex) {
-  if (!plan) return;
-  stepIndex = Math.max(0, Math.min(nextIndex, plan.steps.length - 1));
-  const step = plan.steps[stepIndex];
-  resetHighlights();
-  const target = portal.querySelector(`[data-cl-id="${cssEscape(step.target_id)}"]`);
-  if (target) {
-    target.classList.add('clarity-target');
-    target.scrollIntoView({ behavior:'smooth', block:'center', inline:'nearest' });
-    if (step.action === 'focus' || step.action === 'type' || step.action === 'select') {
-      setTimeout(() => target.focus({ preventScroll: true }), 450);
-    }
-  }
-  stepCounter.textContent = `Paso ${stepIndex + 1} de ${plan.steps.length}`;
-  confidence.textContent = `${Math.round((plan.confidence || 0) * 100)}% confianza`;
-  guideTitle.textContent = step.instruction;
-  guideWhy.textContent = step.why || plan.summary || '';
-  prevStep.disabled = stepIndex === 0;
-  nextStep.textContent = stepIndex === plan.steps.length - 1 ? 'Finalizar' : 'Siguiente';
-}
+function resetGuide(){plan=null;stepIndex=0;portal?.classList.remove('clarity-active');if(guide)guide.hidden=true;if(engineBadge)engineBadge.textContent='Listo';resetHighlights();for(const el of tagged)delete el.dataset.clId;tagged=[];currentSessionId=null;}
+function resetHighlights(){portal?.querySelectorAll('.clarity-target').forEach((el)=>el.classList.remove('clarity-target'));}
+function isVisible(el){const style=getComputedStyle(el);const rect=el.getBoundingClientRect();return style.display!=='none'&&style.visibility!=='hidden'&&Number(style.opacity)!==0&&rect.width>0&&rect.height>0;}
+function getLabel(el){const aria=el.getAttribute('aria-label');if(aria)return clean(aria);if(el.labels?.length)return clean([...el.labels].map((x)=>x.innerText).join(' '));if(el.id){try{const label=portal.querySelector(`label[for="${cssEscape(el.id)}"]`);if(label)return clean(label.innerText);}catch{}}return clean(el.innerText||el.textContent||el.getAttribute('placeholder')||el.getAttribute('name')||'');}
+function clean(value){return String(value||'').replace(/\s+/g,' ').trim();}
+function normalize(value){return clean(value).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9ñ\s]/gi,' ');}
+function cssEscape(value){return globalThis.CSS?.escape?CSS.escape(value):String(value).replace(/["\\]/g,'\\$&');}
 
-function resetGuide() {
-  plan = null;
-  stepIndex = 0;
-  portal.classList.remove('clarity-active');
-  guide.hidden = true;
-  engineBadge.textContent = 'Listo';
-  resetHighlights();
-  for (const el of tagged) delete el.dataset.clId;
-  tagged = [];
-}
+function clientFallback(goal,page){const ng=normalize(goal);const intentWords=ng.includes('turno')||ng.includes('cita')?['especialidad','profesional','sede','fecha','horario']:[];const tokens=ng.split(' ').filter((x)=>x.length>3);const scored=page.elements.map((el,order)=>{const text=normalize([el.label,el.text,el.placeholder,el.context].filter(Boolean).join(' '));let score=intentWords.some((w)=>text.includes(w))?6:0;for(const token of tokens)if(text.includes(token))score+=3;return{el,score,order};}).filter((x)=>x.score>0).sort((a,b)=>b.score-a.score||a.order-b.order);const selected=scored.slice(0,5).sort((a,b)=>a.order-b.order).map((x)=>x.el);const steps=selected.map((el)=>({target_id:el.id,target_text:el.label||el.text,action:el.tag==='select'?'select':(el.tag==='input'?'type':'click'),instruction:el.tag==='select'?`Elegí una opción en “${el.label||el.text}”.`:(el.tag==='input'?`Completá “${el.label||el.text}”.`:`Seleccioná “${el.label||el.text}”.`),why:'Este paso forma parte del recorrido mínimo detectado en la página.'}));if(!steps.length&&page.elements[0]){const el=page.elements[0];steps.push({target_id:el.id,target_text:el.label||el.text,action:'focus',instruction:`Revisá “${el.label||el.text||'este control'}”.`,why:'Es el primer control disponible para continuar.'});}return{goal,summary:'Modo de contingencia en el navegador.',steps,confidence:.5,warnings:['El backend no respondió; se usó el motor de contingencia del navegador.'],mode:'client-fallback'};}
 
-function resetHighlights() {
-  portal.querySelectorAll('.clarity-target').forEach((el) => el.classList.remove('clarity-target'));
-}
-
-function isVisible(el) {
-  const style = getComputedStyle(el);
-  const rect = el.getBoundingClientRect();
-  return style.display !== 'none' && style.visibility !== 'hidden' && Number(style.opacity) !== 0 && rect.width > 0 && rect.height > 0;
-}
-
-function getLabel(el) {
-  const aria = el.getAttribute('aria-label');
-  if (aria) return clean(aria);
-  if (el.labels?.length) return clean([...el.labels].map((x) => x.innerText).join(' '));
-  if (el.id) {
-    const label = portal.querySelector(`label[for="${cssEscape(el.id)}"]`);
-    if (label) return clean(label.innerText);
-  }
-  return clean(el.innerText || el.textContent || el.getAttribute('placeholder') || el.getAttribute('name') || '');
-}
-
-function clean(value) { return String(value || '').replace(/\s+/g,' ').trim(); }
-function cssEscape(value) { return globalThis.CSS?.escape ? CSS.escape(value) : String(value).replace(/["\\]/g,'\\$&'); }
-
-
-function clientFallback(goal, page) {
-  const ng = normalize(goal);
-  const intentWords = ng.includes('turno') || ng.includes('cita')
-    ? ['especialidad','profesional','sede','fecha','horario'] : [];
-  const tokens = ng.split(' ').filter((x) => x.length > 3);
-  const scored = page.elements.map((el, order) => {
-    const text = normalize([el.label, el.text, el.placeholder, el.context].filter(Boolean).join(' '));
-    let score = intentWords.some((w) => text.includes(w)) ? 6 : 0;
-    for (const token of tokens) if (text.includes(token)) score += 3;
-    return { el, score, order };
-  }).filter((x) => x.score > 0).sort((a,b) => b.score - a.score || a.order - b.order);
-  const selected = scored.slice(0,5).sort((a,b) => a.order - b.order).map((x) => x.el);
-  const steps = selected.map((el) => ({
-    target_id: el.id,
-    target_text: el.label || el.text,
-    action: el.tag === 'select' ? 'select' : (el.tag === 'input' ? 'type' : 'click'),
-    instruction: el.tag === 'select' ? `Elegí una opción en “${el.label || el.text}”.` : (el.tag === 'input' ? `Completá “${el.label || el.text}”.` : `Seleccioná “${el.label || el.text}”.`),
-    why: 'Este paso forma parte del recorrido mínimo detectado en la página.'
-  }));
-  if (!steps.length && page.elements[0]) {
-    const el = page.elements[0];
-    steps.push({ target_id:el.id, target_text:el.label||el.text, action:'focus', instruction:`Revisá “${el.label || el.text || 'este control'}”.`, why:'Es el primer control disponible para continuar.' });
-  }
-  return { goal, summary:'Modo de contingencia en el navegador.', steps, confidence:.5, warnings:['El backend no respondió; se usó el motor de contingencia del navegador.'], mode:'client-fallback' };
-}
-function normalize(value) { return clean(value).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9ñ\s]/gi,' '); }
+function createSessionId(){try{return crypto.randomUUID();}catch{return`demo-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;}}
+async function trackGuideCreated({goal,page,latencyMs}){try{await fetch('/api/evidence',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:'session',payload:{sessionId:currentSessionId,event:'guide_created',goal:goal.slice(0,180),domain:'demo-salud-central',controls:page.elements.length,steps:plan?.steps?.length||0,mode:plan?.mode||'unknown',latencyMs,completed:false}})});}catch{}}
+async function trackCompletion(){if(!currentSessionId||!plan)return;try{await fetch('/api/evidence',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:'session',payload:{sessionId:currentSessionId,event:'guide_completed',goal:goalInput.value.trim().slice(0,180),domain:'demo-salud-central',controls:tagged.length,steps:plan.steps.length,mode:plan.mode||'unknown',latencyMs:0,completed:true}})});}catch{}}

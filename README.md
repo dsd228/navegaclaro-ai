@@ -1,81 +1,133 @@
 # NavegaClaro AI
 
-> **Decís qué querés hacer. NavegaClaro encuentra el camino mínimo dentro de la página y te guía una acción por vez.**
+> **La web, paso a paso.** Una web app + extensión de Chrome que transforma interfaces complejas en recorridos guiados según el objetivo de la persona.
 
-Proyecto funcional para **CoderCup AI 2026**.
+Proyecto para **CoderCup AI 2026**.
 
-**Producción:** `https://navegaclaro-codercup-live-2026.vercel.app`
+## Qué problema resuelve
 
-## El problema
+Muchas tareas digitales —pedir un turno, completar un trámite, buscar un servicio— presentan navegación, banners, formularios y decisiones simultáneas. Para personas con dificultades de atención, memoria de trabajo o comprensión, esa complejidad puede bloquear una tarea que debería ser simple.
 
-Muchas tareas digitales simples —pedir un turno, encontrar un servicio, completar un trámite o pagar una factura— obligan primero a entender navegación, banners, formularios y decisiones simultáneas. Para una persona que se distrae, se abruma o tiene dificultades de atención o comprensión, esa complejidad puede convertirse en una barrera.
+NavegaClaro recibe un objetivo en lenguaje natural, por ejemplo:
 
-NavegaClaro invierte esa relación: la persona expresa el objetivo en lenguaje natural y la interfaz se convierte en un recorrido claro sobre **controles reales de la página**.
+> “Quiero sacar un turno con dermatología.”
 
-Ejemplo:
+Luego identifica el recorrido mínimo y guía sobre los controles reales de la página, una acción por vez.
 
-> “Quiero encontrar un dermatólogo en Córdoba.”
+## Producto v0.4
 
-## Por qué no es un chatbot ni un wrapper
+### Web app
+
+- landing/product experience completa;
+- demo funcional con Groq real;
+- health status en vivo;
+- dashboard de evidencia;
+- Test Lab para registrar pruebas reales;
+- integración preparada con Google Sheets;
+- estado vacío honesto si todavía no existen métricas.
+
+### Extensión Chrome
+
+- Manifest V3;
+- captura estructurada del DOM visible;
+- IDs controlados antes del LLM;
+- guía secuencial sobre controles reales;
+- recuperación por texto si una SPA vuelve a renderizar el target;
+- fallback resiliente si falla red/modelo.
+
+### Backend Vercel
+
+- `/api/analyze` — Groq GPT-OSS 120B + Structured Outputs;
+- `/api/health` — estado de IA/evidencia;
+- `/api/evidence` — proxy seguro hacia Google Sheets/Apps Script;
+- rate limiting y límites de payload.
+
+## Diferencial técnico
+
+NavegaClaro **no pide al LLM que invente selectores CSS**. El navegador asigna IDs controlados a elementos interactivos visibles. El modelo solo puede elegir entre esos IDs y devuelve JSON Schema estricto. El backend valida que todos los targets existan antes de usar el plan.
 
 ```text
-Objetivo de la persona
-        ↓
-DOM vivo de la página
-        ↓
-Controles visibles + IDs creados por NavegaClaro
-        ↓
+Objetivo humano
+      ↓
+DOM vivo + controles visibles
+      ↓
+IDs controlados
+      ↓
 Groq GPT-OSS 120B
-        ↓
+      ↓
 JSON Schema estricto
-        ↓
-Validación contra IDs reales
-        ↓
-Guía visual paso a paso sobre la web original
+      ↓
+Validación
+      ↓
+Guía sobre el control real
 ```
 
-El modelo **no inventa selectores CSS** y no hace clic por la persona. NavegaClaro guía; la persona mantiene el control.
+## Privacidad
 
-## Robustez de la versión 0.3
+- no se envían valores de `input` / `textarea`;
+- contraseñas, OTP y campos de tarjeta se excluyen;
+- query strings/fragments se eliminan;
+- emails y números largos se redactan en telemetría/evidencia;
+- Google Sheets registra participantes anónimos (`P01`, `P02`...), no identidad real.
 
-- Chrome Extension Manifest V3.
-- Service Worker propio para aislar la llamada remota del contexto de la web visitada.
-- Groq `openai/gpt-oss-120b` con Structured Outputs estrictos.
-- IDs controlados y validación de cada `target_id`.
-- Recuperación por texto/etiqueta si una SPA vuelve a renderizar un control.
-- Highlight mediante una capa visual independiente: no modifica `position` ni layout del sitio.
-- Fallback local si Groq, Vercel o la red fallan.
-- Preselección semántica en páginas con cientos de controles para reducir ruido y tokens.
-- Rate limiting y límite de payload en producción para proteger la cuota gratuita.
-- Healthcheck versionado y smoke tests contra producción.
+## Google Sheets como capa de evidencia
 
-## Privacidad por diseño
+La web app puede mostrar métricas reales calculadas desde un spreadsheet:
 
-NavegaClaro no envía `input.value`, `textarea.value` ni contraseñas. La versión 0.3 además:
+```text
+Google Sheets
+  ├─ TEST_USUARIOS
+  ├─ SESIONES
+  ├─ QA
+  └─ METRICAS
+```
 
-- excluye controles sensibles por `type`, `autocomplete` y nombres típicos de credenciales/OTP/tarjetas;
-- elimina query strings y fragments de la URL;
-- redacta emails y secuencias numéricas largas del contexto;
-- ya no envía el texto completo de la página: usa títulos/encabezados semánticos y contexto de controles;
-- trata el contenido de la web como datos no confiables frente a prompt injection.
+El frontend nunca ve el secreto de Google Sheets. La cadena es:
 
-## Modo resiliente
+```text
+Web app / Test Lab → Vercel /api/evidence → Apps Script → Google Sheets
+```
 
-Si la IA no responde, el producto no se cae. Un motor local prioriza controles relacionados con el objetivo, elimina ruido obvio y conserva el orden natural del formulario.
+Configuración completa: [`docs/GOOGLE_SHEETS_SETUP.md`](docs/GOOGLE_SHEETS_SETUP.md).
 
-La IA es el modo principal; el fallback existe para que una falla externa no destruya la experiencia ni la demo.
+## Variables de entorno
 
-## Instalar la extensión
+### IA
 
-1. Descargá o cloná este repositorio.
-2. Abrí `chrome://extensions`.
-3. Activá **Developer mode / Modo desarrollador**.
-4. Elegí **Load unpacked / Cargar descomprimida**.
-5. Seleccioná la carpeta `extension/`.
-6. Recargá cualquier pestaña que ya estuviera abierta.
-7. Abrí NavegaClaro, escribí tu objetivo y tocá **Guiarme paso a paso**.
+```text
+GROQ_API_KEY=<clave>
+GROQ_MODEL=openai/gpt-oss-120b   # opcional
+```
 
-No hace falta configurar endpoints ni claves dentro de la extensión.
+### Evidencia
+
+```text
+GOOGLE_SHEETS_WEBAPP_URL=https://script.google.com/macros/s/.../exec
+GOOGLE_SHEETS_SHARED_SECRET=<secreto Apps Script>
+EVIDENCE_ADMIN_TOKEN=<token para Test Lab>
+```
+
+Si Google Sheets todavía no está conectado, la app sigue funcionando y muestra evidencia pendiente sin inventar métricas.
+
+## Estructura
+
+```text
+api/
+  analyze.js
+  evidence.js
+  health.js
+lib/
+extension/
+google-apps-script/
+  Code.gs
+index.html
+app.js
+styles.css
+test-lab.html
+test-lab.js
+tests/
+docs/
+```
 
 ## Tests
 
@@ -85,118 +137,55 @@ Requiere Node 20+.
 npm test
 ```
 
-Además, cada push a `main` ejecuta dos validaciones contra producción:
+GitHub Actions también valida sintaxis de la extensión, empaqueta el artifact instalable y ejecuta un smoke test contra producción con inferencia real de Groq.
 
-1. un flujo de turno médico;
-2. un buscador de servicios estilo web externa.
+## Instalar extensión
 
-El smoke test exige Groq real, IDs válidos y la versión esperada antes de aprobar.
+1. Abrir `chrome://extensions`.
+2. Activar **Developer mode**.
+3. Elegir **Load unpacked**.
+4. Seleccionar `extension/`.
+5. Recargar las pestañas abiertas.
+6. Escribir un objetivo y usar NavegaClaro.
 
-## API
+## Evidencia CoderCup
 
-### `POST /api/analyze`
+El producto no publica resultados ficticios. Las pruebas deben registrar:
 
-Recibe:
-
-```json
-{
-  "goal": "Quiero encontrar un dermatólogo en Córdoba",
-  "page": {
-    "title": "Buscador de servicios",
-    "url": "https://ejemplo.com/buscar",
-    "text": "Buscar profesionales",
-    "elements": []
-  }
-}
-```
-
-Devuelve un recorrido validado:
-
-```json
-{
-  "goal": "Encontrar un dermatólogo en Córdoba",
-  "steps": [
-    {
-      "instruction": "Elegí Dermatología en Especialidad.",
-      "target_id": "cl-12",
-      "target_text": "Especialidad",
-      "action": "select",
-      "why": "Define el tipo de profesional que querés encontrar."
-    }
-  ],
-  "mode": "ai",
-  "provider": "groq"
-}
-```
-
-### `GET /api/health`
-
-Expone estado, versión, proveedor y modelo sin revelar secretos.
-
-## Configuración de producción
-
-En Vercel:
-
-```text
-GROQ_API_KEY=<secret>
-GROQ_MODEL=openai/gpt-oss-120b   # opcional
-```
-
-La API key nunca vive en la extensión ni en el frontend.
-
-## Testing con usuarios
-
-El protocolo está en `docs/TEST_PLAN.md`.
-
-Para CoderCup se registran, sin inventar métricas:
-
-- éxito de tarea;
+- éxito;
 - tiempo;
 - errores críticos;
 - pedidos de ayuda;
-- facilidad percibida;
-- citas textuales anónimas.
+- facilidad 1–5;
+- cita anónima opcional.
 
-Con 5 participantes se reportará **señal inicial de usabilidad**, no significancia estadística.
+Con n=5 se comunica como **señal inicial de usabilidad**, no como significancia estadística.
 
-## Alcance del MVP
+## Alcance MVP
 
 ### Implementado
 
-- web demo pública;
-- extensión Chrome funcional;
-- DOM estructurado y controles reales;
-- análisis con IA;
-- guía secuencial;
-- recuperación ante DOM dinámico;
-- protección de datos de formularios;
-- fallback local;
-- API pública protegida;
-- CI/CD y smoke tests de producción.
+- web app pública;
+- demo real;
+- extensión Chrome;
+- IA estructurada;
+- validación anti-target inventado;
+- fallback;
+- dashboard de evidencia;
+- Test Lab;
+- adaptador Google Sheets;
+- CI + smoke test.
 
-### Fuera del MVP
+### Roadmap — no se presenta como implementado
 
-- cuentas de usuario;
-- historial;
-- voz;
-- automatización de clicks irreversibles;
 - perfiles persistentes;
-- publicación en Chrome Web Store.
+- voz;
+- publicación Chrome Web Store;
+- validación longitudinal con población objetivo.
 
-No se presentan funcionalidades de roadmap como si estuvieran implementadas.
+Ver también:
 
-## Documentación CoderCup
-
-- `docs/WIN_STRATEGY_2026.md`
-- `docs/CODERCUP_AUDIT.md`
-- `docs/TEST_PLAN.md`
-- `docs/PITCH_2_MIN.md`
-- `docs/SUBMISSION.md`
-
-## Referencias
-
-- W3C WAI — Cognitive and learning barriers
-- W3C COGA — Clear step-by-step instructions
-- Groq — Structured Outputs / GPT-OSS 120B
-
-**NavegaClaro no automatiza a la persona. Simplifica la interfaz para que pueda actuar por sí misma.**
+- [`docs/CODERCUP_AUDIT.md`](docs/CODERCUP_AUDIT.md)
+- [`docs/WIN_STRATEGY_2026.md`](docs/WIN_STRATEGY_2026.md)
+- [`docs/TEST_PLAN.md`](docs/TEST_PLAN.md)
+- [`docs/PITCH_2_MIN.md`](docs/PITCH_2_MIN.md)

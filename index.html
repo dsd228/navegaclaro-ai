@@ -3,9 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="NavegaClaro convierte interfaces complejas en recorridos claros, paso a paso, con IA." />
-  <title>NavegaClaro AI — La web, adaptada a tu objetivo</title>
-  <link rel="stylesheet" href="styles.css">
+  <meta name="description" content="NavegaClaro convierte interfaces web complejas en recorridos claros, paso a paso, según el objetivo de la persona." />
+  <meta name="theme-color" content="#080a0d" />
+  <title>NavegaClaro AI — La web, paso a paso</title>
+  <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
   <header class="topbar">
@@ -15,26 +16,58 @@
     </a>
     <nav aria-label="Navegación principal">
       <a href="#demo">Demo</a>
-      <a href="#evidence">Evidencia</a>
+      <a href="#evidence">Impacto</a>
       <a href="#how">Cómo funciona</a>
+      <a href="#install">Extensión</a>
     </nav>
-    <a class="button button-ghost" href="https://github.com/dsd228/navegaclaro-ai/tree/main/extension" target="_blank" rel="noreferrer">Extensión</a>
+    <a class="button button-ghost topbar-cta" href="#demo">Probar ahora</a>
   </header>
 
   <main id="top">
     <section class="hero section-shell">
-      <div class="eyebrow">Accesibilidad cognitiva + IA</div>
-      <h1>No te adaptes a la interfaz.<br><span>Que la interfaz se adapte a vos.</span></h1>
-      <p class="hero-copy">Decí qué querés hacer. NavegaClaro identifica el recorrido mínimo y convierte una página sobrecargada en instrucciones claras, una acción por vez.</p>
-      <div class="hero-actions">
-        <a class="button button-primary" href="#demo">Probar demo</a>
-        <a class="button button-secondary" href="#how">Ver arquitectura</a>
+      <div class="hero-grid">
+        <div>
+          <div class="eyebrow">Accesibilidad cognitiva · IA aplicada</div>
+          <h1>Decí qué querés hacer.<br><span>La web encuentra el camino.</span></h1>
+          <p class="hero-copy">NavegaClaro transforma una interfaz sobrecargada en una guía clara sobre los controles reales de la página. Una acción por vez. Sin hacer la tarea a escondidas por vos.</p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="#demo">Ver la transformación</a>
+            <a class="button button-secondary" href="#evidence">Ver evidencia</a>
+          </div>
+        </div>
+
+        <aside class="system-card" aria-label="Estado del sistema">
+          <div class="system-card-head">
+            <span class="live-dot" aria-hidden="true"></span>
+            <strong>Sistema en vivo</strong>
+            <span class="version-chip">v0.4</span>
+          </div>
+          <div class="system-row"><span>Motor IA</span><strong id="systemAi">Verificando…</strong></div>
+          <div class="system-row"><span>Evidencia</span><strong id="systemEvidence">Verificando…</strong></div>
+          <div class="system-row"><span>Privacidad</span><strong>Valores redactados</strong></div>
+          <div class="system-row"><span>Resiliencia</span><strong>Fallback activo</strong></div>
+          <p id="systemNote" class="system-note">Comprobando producción.</p>
+        </aside>
       </div>
-      <div class="proof-strip" aria-label="Principios del producto">
-        <span>Objetivo en lenguaje natural</span>
-        <span>DOM estructurado, no screenshots</span>
-        <span>Fallback si la IA falla</span>
-        <span>Sin leer valores ingresados</span>
+
+      <div class="proof-strip" aria-label="Principios de NavegaClaro">
+        <span><b>01</b> Objetivo en lenguaje natural</span>
+        <span><b>02</b> DOM vivo, no screenshots</span>
+        <span><b>03</b> IDs verificables</span>
+        <span><b>04</b> Persona siempre al mando</span>
+      </div>
+    </section>
+
+    <section class="problem-band">
+      <div class="section-shell problem-grid">
+        <div>
+          <div class="eyebrow">El problema</div>
+          <h2>Muchas interfaces obligan a entender el sistema antes de poder hacer la tarea.</h2>
+        </div>
+        <div class="problem-copy">
+          <p>Navegación, banners, beneficios, formularios, mensajes y decisiones aparecen al mismo tiempo. Para una persona con dificultades de atención, memoria de trabajo o comprensión, esa complejidad puede convertirse en una barrera.</p>
+          <p class="problem-emphasis">NavegaClaro invierte la relación: primero entiende el objetivo; después reduce el recorrido a lo indispensable.</p>
+        </div>
       </div>
     </section>
 
@@ -42,9 +75,9 @@
       <div class="section-heading">
         <div>
           <div class="eyebrow">Demo funcional</div>
-          <h2>De una página ruidosa a un recorrido claro.</h2>
+          <h2>De ruido digital a un recorrido mínimo.</h2>
         </div>
-        <p>Este portal es deliberadamente complejo para probar el motor. El análisis usa el endpoint real de NavegaClaro; si la API de IA no está configurada, entra en modo resiliente.</p>
+        <p>La demo usa el mismo endpoint de producción que la extensión. La IA selecciona únicamente controles reales previamente identificados por NavegaClaro.</p>
       </div>
 
       <div class="demo-grid">
@@ -56,9 +89,13 @@
           </div>
           <label for="goalInput">¿Qué querés hacer?</label>
           <textarea id="goalInput" rows="3">Quiero sacar un turno con dermatología</textarea>
+          <div class="example-goals" aria-label="Objetivos de ejemplo">
+            <button type="button" data-goal="Quiero sacar un turno con dermatología">Dermatología</button>
+            <button type="button" data-goal="Necesito buscar horarios para un turno">Buscar horarios</button>
+          </div>
           <button id="simplifyBtn" class="button button-primary button-block">Simplificar esta página</button>
           <button id="resetBtn" class="button button-ghost button-block">Restaurar</button>
-          <p id="privacyNote" class="microcopy">Privacidad: no enviamos lo que escribís en campos del formulario; solo etiquetas, roles y texto visible.</p>
+          <p class="microcopy">No enviamos valores ingresados en formularios, contraseñas, OTP ni datos de tarjeta. El contenido visible se minimiza antes del análisis.</p>
           <div id="guide" class="guide" hidden>
             <div class="guide-meta">
               <span id="stepCounter">Paso 1</span>
@@ -76,89 +113,35 @@
         <div id="portal" class="portal" aria-label="Portal de turnos de demostración">
           <div class="portal-alert">Nueva credencial digital disponible. Actualizá tus datos antes del 30/09.</div>
           <div class="portal-header">
-            <div>
-              <strong>Salud Central</strong>
-              <span>Portal de pacientes</span>
-            </div>
+            <div><strong>Salud Central</strong><span>Portal de pacientes</span></div>
             <div class="portal-user">DD</div>
           </div>
           <div class="portal-layout">
             <nav class="portal-nav" aria-label="Portal de pacientes">
-              <button>Inicio</button>
-              <button>Mi perfil</button>
-              <button>Resultados</button>
-              <button>Recetas</button>
-              <button>Autorizaciones</button>
-              <button>Facturación</button>
-              <button>Beneficios</button>
+              <button>Inicio</button><button>Mi perfil</button><button>Resultados</button><button>Recetas</button><button>Autorizaciones</button><button>Facturación</button><button>Beneficios</button>
             </nav>
             <div class="portal-content">
               <div class="portal-breadcrumb">Inicio / Gestiones / Atención ambulatoria / Solicitudes</div>
               <div class="portal-card portal-banner">
-                <div>
-                  <small>Programa preventivo</small>
-                  <h3>Chequeo anual 2026</h3>
-                  <p>Conocé estudios incluidos, requisitos y centros disponibles.</p>
-                </div>
+                <div><small>Programa preventivo</small><h3>Chequeo anual 2026</h3><p>Conocé estudios incluidos, requisitos y centros disponibles.</p></div>
                 <button>Ver programa</button>
               </div>
               <div class="portal-row">
                 <div class="portal-card portal-main-card">
-                  <div class="portal-title-row">
-                    <div>
-                      <small>Gestiones</small>
-                      <h3>Solicitar turno</h3>
-                    </div>
-                    <span class="portal-chip">Online</span>
-                  </div>
+                  <div class="portal-title-row"><div><small>Gestiones</small><h3>Solicitar turno</h3></div><span class="portal-chip">Online</span></div>
                   <p class="portal-help">Completá la información solicitada. La disponibilidad depende de tu plan y de la sede seleccionada.</p>
                   <div class="form-grid">
-                    <label>Especialidad
-                      <select id="especialidad">
-                        <option value="">Seleccionar</option>
-                        <option>Clínica médica</option>
-                        <option>Dermatología</option>
-                        <option>Oftalmología</option>
-                      </select>
-                    </label>
-                    <label>Profesional
-                      <select id="profesional">
-                        <option value="">Seleccionar</option>
-                        <option>Dra. Paula Gómez</option>
-                        <option>Dr. Martín Ruiz</option>
-                      </select>
-                    </label>
-                    <label>Sede
-                      <select id="sede">
-                        <option>Centro</option>
-                        <option>Norte</option>
-                      </select>
-                    </label>
-                    <label>Fecha
-                      <input id="fecha" type="date" />
-                    </label>
+                    <label>Especialidad<select id="especialidad"><option value="">Seleccionar</option><option>Clínica médica</option><option>Dermatología</option><option>Oftalmología</option></select></label>
+                    <label>Profesional<select id="profesional"><option value="">Seleccionar</option><option>Dra. Paula Gómez</option><option>Dr. Martín Ruiz</option></select></label>
+                    <label>Sede<select id="sede"><option>Centro</option><option>Norte</option></select></label>
+                    <label>Fecha<input id="fecha" type="date" /></label>
                   </div>
-                  <div class="portal-terms">
-                    <label><input type="checkbox" /> Acepto recibir recordatorios y comunicaciones administrativas.</label>
-                  </div>
-                  <div class="portal-actions">
-                    <button class="portal-secondary">Guardar borrador</button>
-                    <button id="buscarTurnos" class="portal-primary">Buscar horarios</button>
-                  </div>
+                  <div class="portal-terms"><label><input type="checkbox" /> Acepto recibir recordatorios y comunicaciones administrativas.</label></div>
+                  <div class="portal-actions"><button class="portal-secondary">Guardar borrador</button><button id="buscarTurnos" class="portal-primary">Buscar horarios</button></div>
                 </div>
                 <aside class="portal-side">
-                  <div class="portal-card">
-                    <h4>Accesos rápidos</h4>
-                    <a href="#">Cartilla médica</a>
-                    <a href="#">Telemedicina</a>
-                    <a href="#">Centros de atención</a>
-                    <a href="#">Preguntas frecuentes</a>
-                  </div>
-                  <div class="portal-card ad-card">
-                    <small>Beneficio del mes</small>
-                    <strong>20% en ópticas adheridas</strong>
-                    <a href="#">Conocer condiciones</a>
-                  </div>
+                  <div class="portal-card"><h4>Accesos rápidos</h4><a href="#">Cartilla médica</a><a href="#">Telemedicina</a><a href="#">Centros de atención</a><a href="#">Preguntas frecuentes</a></div>
+                  <div class="portal-card ad-card"><small>Beneficio del mes</small><strong>20% en ópticas adheridas</strong><a href="#">Conocer condiciones</a></div>
                 </aside>
               </div>
             </div>
@@ -169,51 +152,100 @@
     </section>
 
     <section id="evidence" class="evidence section-shell">
-      <div class="section-heading">
+      <div class="section-heading evidence-heading">
         <div>
-          <div class="eyebrow">Problema real</div>
-          <h2>Diseñado sobre necesidades documentadas de accesibilidad cognitiva.</h2>
+          <div class="eyebrow">Evidencia viva · Google Sheets</div>
+          <h2>El producto no solo funciona. También medimos si realmente ayuda.</h2>
         </div>
-        <p>La evidencia de usuario de CoderCup se incorporará con tests reales. Hasta entonces, el proyecto no inventa métricas ni testimonios.</p>
+        <div>
+          <p>Las métricas se calculan desde pruebas registradas en Google Sheets. Si todavía no hay datos reales, el dashboard muestra un estado vacío en lugar de inventar resultados.</p>
+          <span id="evidenceSource" class="source-chip">Conectando evidencia…</span>
+        </div>
       </div>
-      <div class="evidence-grid">
-        <article>
-          <span class="evidence-num">01</span>
-          <h3>Pasos claros</h3>
-          <p>Una instrucción por vez, con progreso visible y lenguaje directo.</p>
+
+      <div class="impact-dashboard">
+        <article class="metric-card metric-card-wide">
+          <span class="metric-label">Participantes reales</span>
+          <strong id="metricParticipants">—</strong>
+          <small id="metricParticipantsNote">Esperando pruebas</small>
         </article>
-        <article>
-          <span class="evidence-num">02</span>
-          <h3>Menos carga visual</h3>
-          <p>Resalta lo relevante y reduce el peso perceptual del contenido secundario.</p>
+        <article class="metric-card">
+          <span class="metric-label">Éxito sin NavegaClaro</span>
+          <strong id="metricSuccessBefore">—</strong>
+          <small>tareas completadas</small>
         </article>
-        <article>
-          <span class="evidence-num">03</span>
-          <h3>Adaptación por objetivo</h3>
-          <p>El mismo sitio puede mostrar recorridos distintos según lo que la persona necesita hacer.</p>
+        <article class="metric-card accent-card">
+          <span class="metric-label">Éxito con NavegaClaro</span>
+          <strong id="metricSuccessAfter">—</strong>
+          <small>tareas completadas</small>
         </article>
+        <article class="metric-card">
+          <span class="metric-label">Tiempo medio sin</span>
+          <strong id="metricTimeBefore">—</strong>
+          <small>segundos</small>
+        </article>
+        <article class="metric-card accent-card">
+          <span class="metric-label">Tiempo medio con</span>
+          <strong id="metricTimeAfter">—</strong>
+          <small>segundos</small>
+        </article>
+        <article class="metric-card">
+          <span class="metric-label">Errores sin / con</span>
+          <strong id="metricErrors">—</strong>
+          <small>errores críticos</small>
+        </article>
+      </div>
+
+      <div id="evidenceEmpty" class="evidence-empty">
+        <div><strong>Sin métricas inventadas.</strong><p>El dashboard se completa automáticamente al registrar las pruebas reales del concurso.</p></div>
+        <a class="button button-secondary" href="/test-lab.html">Abrir Test Lab</a>
+      </div>
+    </section>
+
+    <section class="measurement-band">
+      <div class="section-shell measurement-grid">
+        <div><span class="eyebrow">Loop de evidencia</span><h2>Probar → medir → mejorar.</h2></div>
+        <ol class="measurement-flow">
+          <li><span>1</span><div><strong>Prueba real</strong><p>Misiones equivalentes con y sin NavegaClaro.</p></div></li>
+          <li><span>2</span><div><strong>Registro mínimo</strong><p>Éxito, tiempo, errores, ayudas y facilidad. Sin datos personales innecesarios.</p></div></li>
+          <li><span>3</span><div><strong>Google Sheets</strong><p>Fuente auditable para calcular evidencia sin editar números a mano.</p></div></li>
+          <li><span>4</span><div><strong>Dashboard</strong><p>La web muestra únicamente resultados que existen.</p></div></li>
+        </ol>
       </div>
     </section>
 
     <section id="how" class="how section-shell">
       <div class="section-heading">
-        <div>
-          <div class="eyebrow">Arquitectura</div>
-          <h2>IA que toma decisiones accionables, no un chatbot.</h2>
-        </div>
+        <div><div class="eyebrow">Por qué no es un wrapper</div><h2>La IA decide sobre controles verificables.</h2></div>
+        <p>El LLM no recibe libertad para inventar selectores. NavegaClaro construye un conjunto cerrado de elementos válidos y rechaza cualquier salida que se salga de ese conjunto.</p>
       </div>
       <ol class="flow">
-        <li><span>1</span><div><strong>Captura segura</strong><p>Extrae estructura visible e interactiva. No captura valores escritos ni contraseñas.</p></div></li>
-        <li><span>2</span><div><strong>IDs controlados</strong><p>La extensión asigna IDs antes de llamar al modelo. El LLM elige entre IDs existentes: no inventa selectores CSS.</p></div></li>
-        <li><span>3</span><div><strong>Salida estructurada</strong><p>Groq GPT-OSS 120B devuelve un JSON Schema estricto que validamos antes de usar.</p></div></li>
-        <li><span>4</span><div><strong>Guía ejecutable</strong><p>El navegador hace scroll, resalta el control y mantiene una instrucción a la vez.</p></div></li>
+        <li><span>01</span><div><strong>Captura segura</strong><p>Extrae estructura visible e interactiva; descarta valores de formularios y campos sensibles.</p></div></li>
+        <li><span>02</span><div><strong>IDs controlados</strong><p>La extensión identifica controles antes de llamar al modelo.</p></div></li>
+        <li><span>03</span><div><strong>IA estructurada</strong><p>Groq GPT-OSS 120B devuelve un JSON Schema estricto con un recorrido mínimo.</p></div></li>
+        <li><span>04</span><div><strong>Validación</strong><p>El backend rechaza targets inexistentes y usa fallback si la respuesta no es segura.</p></div></li>
+        <li><span>05</span><div><strong>Guía humana</strong><p>El navegador resalta el control real y mantiene a la persona al mando de cada acción.</p></div></li>
       </ol>
+    </section>
+
+    <section id="install" class="install section-shell">
+      <div class="install-card">
+        <div>
+          <div class="eyebrow">Extensión real · Chrome</div>
+          <h2>La demo explica la idea. La extensión la lleva a la web real.</h2>
+          <p>Manifest V3, backend serverless, Groq en producción, fallback resiliente y controles verificables.</p>
+        </div>
+        <div class="install-actions">
+          <a class="button button-primary" href="https://github.com/dsd228/navegaclaro-ai/tree/main/extension" target="_blank" rel="noreferrer">Ver extensión</a>
+          <a class="button button-secondary" href="https://github.com/dsd228/navegaclaro-ai" target="_blank" rel="noreferrer">Ver código</a>
+        </div>
+      </div>
     </section>
   </main>
 
   <footer class="footer section-shell">
-    <strong>NavegaClaro AI</strong>
-    <span>Prototype for CoderCup 2026 · MVP</span>
+    <div><strong>NavegaClaro AI</strong><span>CoderCup AI 2026 · MVP funcional</span></div>
+    <span>La web, paso a paso.</span>
   </footer>
 
   <script src="/app.js" type="module"></script>

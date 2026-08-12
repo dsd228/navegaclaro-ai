@@ -1,7 +1,8 @@
 {
   "functions": {
     "api/analyze.js": { "maxDuration": 20 },
-    "api/health.js": { "maxDuration": 5 }
+    "api/health.js": { "maxDuration": 5 },
+    "api/evidence.js": { "maxDuration": 15 }
   },
   "headers": [
     {
@@ -9,8 +10,10 @@
       "headers": [
         { "key": "Access-Control-Allow-Origin", "value": "*" },
         { "key": "Access-Control-Allow-Methods", "value": "GET,POST,OPTIONS" },
-        { "key": "Access-Control-Allow-Headers", "value": "Content-Type" },
-        { "key": "Cache-Control", "value": "no-store" }
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type,X-Admin-Token" },
+        { "key": "Cache-Control", "value": "no-store" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "no-referrer" }
       ]
     }
   ]
