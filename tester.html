@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#080a0d">
+  <title>Prueba de NavegaClaro</title>
+  <style>
+    :root{color-scheme:dark;--bg:#080a0d;--card:#11161c;--line:#29323c;--text:#f7f9fb;--muted:#aab4bf;--accent:#b8ff5a;--ink:#101700}
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text)}
+    body{min-height:100dvh}.shell{min-height:100dvh;display:grid;grid-template-rows:auto 1fr}.taskbar{padding:calc(14px + env(safe-area-inset-top)) 16px 14px;background:rgba(8,10,13,.98);border-bottom:1px solid var(--line);position:relative;z-index:5}.brand{display:flex;align-items:center;gap:9px;font-weight:850;font-size:.9rem}.mark{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--accent);color:var(--ink);font-weight:950}.progress{margin-top:13px;color:var(--accent);font-size:.72rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase}.task{margin:6px 0 0;font-size:1rem;line-height:1.4;font-weight:760}.hint{margin:5px 0 0;color:var(--muted);font-size:.78rem;line-height:1.4}.stage{position:relative;min-height:0}.frame{width:100%;height:100%;min-height:calc(100dvh - 150px);border:0;background:#080a0d;display:block}.intro,.done,.transition{position:absolute;inset:0;z-index:3;display:grid;place-items:center;padding:24px;background:var(--bg)}.panel{width:min(520px,100%);padding:24px;border:1px solid var(--line);border-radius:22px;background:var(--card)}.panel h1,.panel h2{margin:0 0 12px;line-height:1.1}.panel p{margin:0 0 18px;color:var(--muted);line-height:1.55}.panel small{display:block;color:var(--muted);line-height:1.5;margin-top:14px}.start{width:100%;min-height:52px;border:0;border-radius:13px;background:var(--accent);color:var(--ink);font:inherit;font-weight:900;font-size:1rem}.hidden{display:none!important}.spinner{width:32px;height:32px;border:3px solid #2b343e;border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 14px}@keyframes spin{to{transform:rotate(360deg)}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="taskbar" id="taskbar" hidden>
+      <div class="brand"><span class="mark">N</span><span>Prueba NavegaClaro</span></div>
+      <div class="progress" id="progress">Prueba 1 de 2</div>
+      <p class="task" id="taskText"></p>
+      <p class="hint" id="taskHint">Hacé la tarea como lo harías normalmente. No hay respuestas para completar.</p>
+    </header>
+    <section class="stage">
+      <div class="intro" id="intro">
+        <div class="panel">
+          <h1>Probá la app haciendo dos tareas breves</h1>
+          <p>Solo usá la app y hacé lo que se te pide. La prueba registra de forma anónima tiempo e interacciones para detectar dónde cuesta avanzar.</p>
+          <button class="start" id="startBtn" type="button">Comenzar prueba</button>
+          <small>No se registran nombres, emails, teléfonos, contraseñas ni lo que escribas en campos personales.</small>
+        </div>
+      </div>
+      <div class="transition hidden" id="transition"><div class="panel"><div class="spinner"></div><h2>Preparando la siguiente tarea…</h2><p>No tenés que completar ningún formulario.</p></div></div>
+      <div class="done hidden" id="done"><div class="panel"><h2>Prueba terminada</h2><p>Gracias. Tus interacciones anónimas quedaron registradas automáticamente.</p></div></div>
+      <iframe class="frame" id="appFrame" title="NavegaClaro"></iframe>
+    </section>
+  </main>
+  <script src="/tester.js" type="module"></script>
+</body>
+</html>
