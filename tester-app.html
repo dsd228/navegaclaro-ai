@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="es" data-condition="sin">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#eef3f6">
+  <title>NavegaClaro · tarea de prueba</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/mobile-rendering-fix.css?v=2">
+  <script>
+    const p=new URLSearchParams(location.search);
+    document.documentElement.dataset.condition=p.get('condition')==='con'?'con':'sin';
+  </script>
+  <style>
+    html,body{margin:0;min-height:100%;background:#eef3f6}
+    body{padding:0!important;overflow-x:hidden}
+    .tester-surface{width:100%;max-width:920px;margin:0 auto;padding:0 0 32px}
+    .demo-grid{display:block!important;margin:0!important;gap:0!important}
+    .clarity-console{margin:0!important;border-radius:0!important;border-left:0!important;border-right:0!important}
+    .portal{margin:0!important;border-radius:0!important;border-left:0!important;border-right:0!important}
+    html[data-condition="sin"] .clarity-console,
+    html[data-condition="sin"] .nc-portal-marker{display:none!important}
+    .portal-layout{min-height:0!important}
+    .portal-alert{position:static!important}
+    @media(max-width:720px){
+      .tester-surface{max-width:none}
+      .portal-layout{display:block!important}
+      .portal-nav{display:none!important}
+      .portal-content{padding:14px!important}
+      .portal-row{display:block!important}
+      .portal-side{display:none!important}
+      .portal-card{border-radius:14px!important}
+      .clarity-console{padding:18px 16px!important}
+    }
+  </style>
+</head>
+<body>
+  <main class="tester-surface">
+    <div class="demo-grid">
+      <aside class="clarity-console" aria-label="Panel NavegaClaro">
+        <div class="console-head">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span>NavegaClaro</span>
+          <span id="engineBadge" class="badge">Listo</span>
+        </div>
+        <label for="goalInput">¿Qué querés hacer?</label>
+        <textarea id="goalInput" rows="3">Quiero encontrar horarios de Dermatología con la Dra. Paula Gómez</textarea>
+        <div class="example-goals" aria-label="Objetivos de ejemplo">
+          <button type="button" data-goal="Quiero encontrar horarios de Dermatología con la Dra. Paula Gómez">Dermatología</button>
+          <button type="button" data-goal="Necesito buscar horarios para un turno">Buscar horarios</button>
+        </div>
+        <button id="simplifyBtn" class="button button-primary button-block" type="button">Mostrarme qué tocar</button>
+        <button id="resetBtn" class="button button-ghost button-block" type="button">Empezar de nuevo</button>
+        <p class="microcopy">NavegaClaro te guía sobre los controles reales. Vos hacés cada acción.</p>
+        <div id="guide" class="guide" hidden>
+          <div class="guide-meta"><span id="stepCounter">Paso 1</span><span id="confidence"></span></div>
+          <h3 id="guideTitle"></h3>
+          <p id="guideWhy"></p>
+          <div class="guide-actions">
+            <button id="prevStep" class="button button-ghost" type="button">Anterior</button>
+            <button id="nextStep" class="button button-primary" type="button">Siguiente</button>
+          </div>
+        </div>
+      </aside>
+
+      <div id="portal" class="portal" aria-label="Salud Central, portal de pacientes">
+        <div class="portal-alert">Nueva credencial digital disponible. Actualizá tus datos antes del 30/09.</div>
+        <div class="portal-header">
+          <div><strong>Salud Central</strong><span>Portal de pacientes</span></div>
+          <div class="portal-user">DD</div>
+        </div>
+        <div class="portal-layout">
+          <nav class="portal-nav" aria-label="Portal de pacientes">
+            <button>Inicio</button><button>Mi perfil</button><button>Resultados</button><button>Recetas</button><button>Autorizaciones</button><button>Facturación</button><button>Beneficios</button>
+          </nav>
+          <div class="portal-content">
+            <div class="portal-breadcrumb">Inicio / Gestiones / Atención ambulatoria / Solicitudes</div>
+            <div class="portal-card portal-banner">
+              <div><small>Programa preventivo</small><h3>Chequeo anual 2026</h3><p>Conocé estudios incluidos, requisitos y centros disponibles.</p></div>
+              <button type="button">Ver programa</button>
+            </div>
+            <div class="portal-row">
+              <div class="portal-card portal-main-card">
+                <div class="portal-title-row"><div><small>Gestiones</small><h3>Solicitar turno</h3></div><span class="portal-chip">Online</span></div>
+                <p class="portal-help">Elegí una especialidad y un profesional para ver sus próximos turnos.</p>
+                <div class="form-grid">
+                  <label>Especialidad<select id="especialidad"><option value="">Seleccionar</option><option>Clínica médica</option><option>Dermatología</option><option>Oftalmología</option></select></label>
+                  <label>Profesional<select id="profesional"><option value="">Seleccionar</option><option>Dra. Paula Gómez</option><option>Dr. Martín Ruiz</option></select></label>
+                  <label>Sede<select id="sede"><option>Centro</option><option>Norte</option></select></label>
+                  <label>Fecha<input id="fecha" type="date"></label>
+                </div>
+                <div class="portal-terms"><label><input type="checkbox"> Acepto recibir recordatorios y comunicaciones administrativas.</label></div>
+                <div class="portal-actions"><button class="portal-secondary" type="button">Guardar borrador</button><button id="buscarTurnos" class="portal-primary" type="button">Buscar horarios</button></div>
+              </div>
+              <aside class="portal-side">
+                <div class="portal-card"><h4>Accesos rápidos</h4><a href="#">Cartilla médica</a><a href="#">Telemedicina</a><a href="#">Centros de atención</a><a href="#">Preguntas frecuentes</a></div>
+                <div class="portal-card ad-card"><small>Beneficio del mes</small><strong>20% en ópticas adheridas</strong><a href="#">Conocer condiciones</a></div>
+              </aside>
+            </div>
+          </div>
+        </div>
+        <button class="portal-chat" type="button">¿Necesitás ayuda?</button>
+      </div>
+    </div>
+  </main>
+
+  <script src="/app.js" defer></script>
+</body>
+</html>
