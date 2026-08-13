@@ -10,7 +10,9 @@ REGLAS DE SEGURIDAD Y CALIDAD:
 - Mantené el orden natural del formulario/flujo cuando sea razonable.
 - Evitá navegación global, anuncios, promociones, beneficios, newsletter, ayuda genérica y contenido secundario salvo que sean indispensables para el objetivo.
 - No incluyas consentimientos opcionales o marketing como pasos, salvo que bloqueen necesariamente el flujo.
-- Si el usuario ya indicó un valor concreto (por ejemplo Dermatología, Córdoba o una categoría) y ese valor aparece en el contexto recibido, mencioná ese valor en la instrucción. No inventes valores.
+- Si el usuario ya indicó un valor concreto y ese valor aparece entre los datos visibles del control recibido, podés mencionarlo en la instrucción.
+- En controles select/combobox, NUNCA afirmes que una opción existe solo porque aparece en el objetivo del usuario. El valor debe aparecer en text, label o context del control recibido.
+- Si el valor pedido no aparece entre las opciones visibles, no lo inventes: indicá que el control debe abrirse para revisar opciones disponibles, bajá la confianza y agregá una advertencia.
 - Una acción por paso. Instrucciones cortas, directas y en el mismo idioma del usuario.
 - No pidas, infieras ni repitas datos sensibles.
 - No ejecutes acciones: solo construí una guía para que la persona mantenga el control.
@@ -117,6 +119,8 @@ export default async function handler(req, res) {
       return res.status(200).json({ ...heuristicPlan(goal, page), processingMs: Date.now() - startedAt });
     }
 
+    guardUnsupportedSelectValues(plan, page, goal);
+
     return res.status(200).json({
       ...plan,
       mode: 'ai',
@@ -136,6 +140,37 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'No se pudo analizar la página.' });
     }
   }
+}
+
+function guardUnsupportedSelectValues(plan, page, goal) {
+  const common = new Set(['quiero','sacar','turno','buscar','horarios','necesito','encontrar','seleccionar','elegir','campo','pagina','portal']);
+  const goalTerms = normalize(goal).split(' ').filter((word) => word.length >= 5 && !common.has(word));
+  const warnings = Array.isArray(plan.warnings) ? [...plan.warnings] : [];
+  for (const step of plan.steps || []) {
+    if (step.action !== 'select') continue;
+    const element = page.elements.find((el) => el.id === step.target_id);
+    if (!element) continue;
+    const available = normalize(`${element.label || ''} ${element.text || ''} ${element.context || ''}`);
+    const instruction = normalize(step.instruction || '');
+    const unsupported = goalTerms.find((term) => instruction.includes(term) && !available.includes(term));
+    if (!unsupported) continue;
+    const label = element.label || step.target_text || 'este campo';
+    step.instruction = `Abrí “${label}” y elegí una opción disponible.`;
+    step.why = `La opción pedida no aparece entre las opciones visibles de este control. NavegaClaro no va a inventarla.`;
+    warnings.push(`La opción “${unsupported}” no aparece entre las opciones visibles de “${label}”.`);
+    plan.confidence = Math.min(Number(plan.confidence) || 0.5, 0.65);
+  }
+  plan.warnings = [...new Set(warnings)].slice(0, 3);
+}
+
+function normalize(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9ñ\s]/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function allowRequest(req, res) {
