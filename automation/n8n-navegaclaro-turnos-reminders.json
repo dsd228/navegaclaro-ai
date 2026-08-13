@@ -1,0 +1,254 @@
+{
+  "name": "NavegaClaro — Turnos + recordatorios",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "navegaclaro-turno-confirmado",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-turno",
+      "name": "Webhook · Turno confirmado",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [-980, 40]
+    },
+    {
+      "parameters": {
+        "jsCode": "const envelope = $json || {};\nconst headers = envelope.headers || {};\nconst body = envelope.body || envelope;\nconst provided = String(headers['x-navegaclaro-secret'] || headers['X-NavegaClaro-Secret'] || '');\nconst expected = String($env.NAVEGACLARO_SHARED_SECRET || '');\nif (!expected || provided !== expected) throw new Error('Unauthorized webhook');\nconst at = new Date(body.appointmentAt);\nif (!Number.isFinite(at.getTime()) || at.getTime() <= Date.now()) throw new Error('Invalid appointmentAt');\nconst channel = String(body.channel || '').toLowerCase();\nif (!['email','whatsapp'].includes(channel)) throw new Error('Invalid channel');\nconst appointmentId = String(body.appointmentId || `nc-${Date.now()}`);\nconst dateLabel = new Intl.DateTimeFormat('es-AR',{dateStyle:'full',timeStyle:'short',timeZone:'America/Argentina/Cordoba'}).format(at);\nconst destinationMasked = channel === 'email' ? String(body.email || '').replace(/^(.{2}).*(@.*)$/,'$1***$2') : String(body.whatsapp || '').replace(/.(?=.{4})/g,'*');\nreturn [{json:{appointmentId,appointmentAt:at.toISOString(),name:String(body.name||'').slice(0,80),email:String(body.email||'').slice(0,160),whatsapp:String(body.whatsapp||'').replace(/\\D/g,'').slice(0,15),channel,service:String(body.service||'Turno').slice(0,120),professional:String(body.professional||'').slice(0,120),location:String(body.location||'').slice(0,120),dateLabel,destinationMasked,createdAt:new Date().toISOString(),status:'confirmado',confirmationSubject:`Turno confirmado · ${String(body.service||'NavegaClaro')}`,confirmationText:`Tu turno quedó confirmado para ${dateLabel}${body.professional ? ` con ${body.professional}` : ''}${body.location ? ` en ${body.location}` : ''}. NavegaClaro te recordará antes del turno.`}}}];"
+      },
+      "id": "prepare-turno",
+      "name": "Validar y preparar turno",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-740, 40]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {"__rl": true, "value": "1TwFkfaJgNMk_bLT-VGb6c2I33eJMC-HBukECnKF9Klw", "mode": "id"},
+        "sheetName": {"__rl": true, "value": "TURNOS", "mode": "name"},
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "turno_id": "={{ $json.appointmentId }}",
+            "creado_en": "={{ $json.createdAt }}",
+            "fecha_hora_turno": "={{ $json.appointmentAt }}",
+            "nombre": "={{ $json.name }}",
+            "email": "={{ $json.email }}",
+            "whatsapp": "={{ $json.whatsapp }}",
+            "canal_preferido": "={{ $json.channel }}",
+            "servicio": "={{ $json.service }}",
+            "profesional": "={{ $json.professional }}",
+            "sede": "={{ $json.location }}",
+            "estado": "confirmado",
+            "confirmacion_enviada": "pendiente",
+            "recordatorio_24h": "pendiente",
+            "recordatorio_2h": "pendiente",
+            "ultimo_envio": "",
+            "observaciones": ""
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "save-turno",
+      "name": "Sheets · Guardar turno",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [-470, -220]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2},
+          "conditions": [{"id":"email-confirm","leftValue":"={{ $json.channel }}","rightValue":"email","operator":{"type":"string","operation":"equals"}}],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-email-confirm",
+      "name": "Canal confirmación · Email?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [-470, 40]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email }}",
+        "subject": "={{ $json.confirmationSubject }}",
+        "message": "={{ $json.confirmationText }}",
+        "options": {"appendAttribution": false, "senderName": "NavegaClaro AI"}
+      },
+      "id": "gmail-confirm",
+      "name": "Gmail · Confirmar turno",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [-180, -20]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/{{$env.META_GRAPH_API_VERSION || 'v23.0'}}/{{$env.WHATSAPP_PHONE_NUMBER_ID}}/messages",
+        "sendHeaders": true,
+        "headerParameters": {"parameters":[{"name":"Authorization","value":"=Bearer {{$env.WHATSAPP_ACCESS_TOKEN}}"},{"name":"Content-Type","value":"application/json"}]},
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { messaging_product: 'whatsapp', to: $json.whatsapp, type: 'template', template: { name: $env.WHATSAPP_CONFIRM_TEMPLATE || 'navegaclaro_turno_confirmado', language: { code: 'es_AR' }, components: [{ type: 'body', parameters: [{type:'text',text:$json.service},{type:'text',text:$json.dateLabel},{type:'text',text:$json.professional || '-'},{type:'text',text:$json.location || '-'}] }] } } }}",
+        "options": {}
+      },
+      "id": "wa-confirm",
+      "name": "WhatsApp · Confirmar turno",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-180, 120]
+    },
+    {
+      "parameters": {
+        "jsCode": "const base = $json;\nconst when = new Date(base.appointmentAt).getTime();\nconst now = Date.now();\nconst reminders = [\n  {key:'24h',offset:24*60*60*1000},\n  {key:'2h',offset:2*60*60*1000}\n];\nreturn reminders.map(r=>({json:{...base,reminderKey:r.key,sendAt:new Date(when-r.offset).toISOString(),subject:`Recordatorio · turno ${r.key === '24h' ? 'mañana' : 'en 2 horas'}`,message:`Recordatorio: tenés ${base.service} el ${base.dateLabel}${base.professional ? ` con ${base.professional}` : ''}${base.location ? ` en ${base.location}` : ''}.`}})).filter(item=>new Date(item.json.sendAt).getTime()>now+60_000);"
+      },
+      "id": "build-reminders",
+      "name": "Crear recordatorios 24h + 2h",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-470, 300]
+    },
+    {
+      "parameters": {
+        "resume": "specificTime",
+        "dateTime": "={{ $json.sendAt }}"
+      },
+      "id": "wait-reminder",
+      "name": "Esperar hasta recordatorio",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [-180, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2},
+          "conditions": [{"id":"email-reminder","leftValue":"={{ $json.channel }}","rightValue":"email","operator":{"type":"string","operation":"equals"}}],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-email-reminder",
+      "name": "Canal recordatorio · Email?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [70, 300]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email }}",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.message }}",
+        "options": {"appendAttribution": false, "senderName": "NavegaClaro AI"}
+      },
+      "id": "gmail-reminder",
+      "name": "Gmail · Enviar recordatorio",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [340, 240]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/{{$env.META_GRAPH_API_VERSION || 'v23.0'}}/{{$env.WHATSAPP_PHONE_NUMBER_ID}}/messages",
+        "sendHeaders": true,
+        "headerParameters": {"parameters":[{"name":"Authorization","value":"=Bearer {{$env.WHATSAPP_ACCESS_TOKEN}}"},{"name":"Content-Type","value":"application/json"}]},
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { messaging_product: 'whatsapp', to: $json.whatsapp, type: 'template', template: { name: $env.WHATSAPP_REMINDER_TEMPLATE || 'navegaclaro_recordatorio_turno', language: { code: 'es_AR' }, components: [{ type: 'body', parameters: [{type:'text',text:$json.service},{type:'text',text:$json.dateLabel},{type:'text',text:$json.professional || '-'},{type:'text',text:$json.location || '-'}] }] } } }}",
+        "options": {}
+      },
+      "id": "wa-reminder",
+      "name": "WhatsApp · Enviar recordatorio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [340, 380]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {"__rl": true, "value": "1TwFkfaJgNMk_bLT-VGb6c2I33eJMC-HBukECnKF9Klw", "mode": "id"},
+        "sheetName": {"__rl": true, "value": "NOTIFICACIONES", "mode": "name"},
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "turno_id": "={{ $('Validar y preparar turno').item.json.appointmentId }}",
+            "tipo": "confirmacion",
+            "canal": "={{ $('Validar y preparar turno').item.json.channel }}",
+            "programado_para": "={{ $('Validar y preparar turno').item.json.createdAt }}",
+            "enviado_en": "={{ $now.toISO() }}",
+            "estado": "enviado",
+            "destino_masked": "={{ $('Validar y preparar turno').item.json.destinationMasked }}",
+            "detalle": "Turno confirmado"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "log-confirm",
+      "name": "Sheets · Log confirmación",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [100, 60]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {"__rl": true, "value": "1TwFkfaJgNMk_bLT-VGb6c2I33eJMC-HBukECnKF9Klw", "mode": "id"},
+        "sheetName": {"__rl": true, "value": "NOTIFICACIONES", "mode": "name"},
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "turno_id": "={{ $('Crear recordatorios 24h + 2h').item.json.appointmentId }}",
+            "tipo": "={{ 'recordatorio_' + $('Crear recordatorios 24h + 2h').item.json.reminderKey }}",
+            "canal": "={{ $('Crear recordatorios 24h + 2h').item.json.channel }}",
+            "programado_para": "={{ $('Crear recordatorios 24h + 2h').item.json.sendAt }}",
+            "enviado_en": "={{ $now.toISO() }}",
+            "estado": "enviado",
+            "destino_masked": "={{ $('Crear recordatorios 24h + 2h').item.json.destinationMasked }}",
+            "detalle": "={{ $('Crear recordatorios 24h + 2h').item.json.message }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "log-reminder",
+      "name": "Sheets · Log recordatorio",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [610, 310]
+    }
+  ],
+  "connections": {
+    "Webhook · Turno confirmado": {"main":[[{"node":"Validar y preparar turno","type":"main","index":0}]]},
+    "Validar y preparar turno": {"main":[[{"node":"Sheets · Guardar turno","type":"main","index":0},{"node":"Canal confirmación · Email?","type":"main","index":0},{"node":"Crear recordatorios 24h + 2h","type":"main","index":0}]]},
+    "Canal confirmación · Email?": {"main":[[{"node":"Gmail · Confirmar turno","type":"main","index":0}],[{"node":"WhatsApp · Confirmar turno","type":"main","index":0}]]},
+    "Gmail · Confirmar turno": {"main":[[{"node":"Sheets · Log confirmación","type":"main","index":0}]]},
+    "WhatsApp · Confirmar turno": {"main":[[{"node":"Sheets · Log confirmación","type":"main","index":0}]]},
+    "Crear recordatorios 24h + 2h": {"main":[[{"node":"Esperar hasta recordatorio","type":"main","index":0}]]},
+    "Esperar hasta recordatorio": {"main":[[{"node":"Canal recordatorio · Email?","type":"main","index":0}]]},
+    "Canal recordatorio · Email?": {"main":[[{"node":"Gmail · Enviar recordatorio","type":"main","index":0}],[{"node":"WhatsApp · Enviar recordatorio","type":"main","index":0}]]},
+    "Gmail · Enviar recordatorio": {"main":[[{"node":"Sheets · Log recordatorio","type":"main","index":0}]]},
+    "WhatsApp · Enviar recordatorio": {"main":[[{"node":"Sheets · Log recordatorio","type":"main","index":0}]]}
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Argentina/Cordoba",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all"
+  },
+  "versionId": "navegaclaro-turnos-v1",
+  "meta": {"templateCredsSetupCompleted": false},
+  "tags": []
+}
