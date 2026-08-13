@@ -4,101 +4,58 @@
   if(!button||button.dataset.ncBound==='1')return;
   button.dataset.ncBound='1';
 
-  const specialty=$('#especialidad'),professional=$('#profesional'),locationField=$('#sede'),dateField=$('#fecha');
   const consent=$('.portal-terms input[type="checkbox"]');
   const actions=button.closest('.portal-actions');
-  const PROFESSIONALS={
-    'Clínica médica':['Dr. Martín Ruiz'],
-    'Dermatología':['Dra. Paula Gómez'],
-    'Oftalmología':['Dr. Martín Ruiz'],
-    'Kinesiología':['Lic. Laura Sosa']
-  };
+  const locationField=$('#sede');
+  const dateField=$('#fecha');
 
-  if(specialty&&!Array.from(specialty.options).some(o=>o.value==='Kinesiología'))specialty.add(new Option('Kinesiología','Kinesiología'));
-  syncProfessionals();
-  specialty?.addEventListener('change',syncProfessionals);
+  const specialty=replaceSelectWithSearch($('#especialidad'),'ncEspecialidades',['Clínica médica','Dermatología','Oftalmología','Kinesiología'],'Escribí una especialidad');
+  const professional=replaceSelectWithSearch($('#profesional'),'ncProfesionales',['Dra. Paula Gómez','Dr. Martín Ruiz','Lic. Laura Sosa'],'Escribí un profesional');
+
+  const form=$('.form-grid');
+  if(form&&!$('.nc-search-help')){
+    const help=document.createElement('p');
+    help.className='nc-search-help';
+    help.innerHTML='<strong>Buscá como te resulte más fácil.</strong> Podés escribir una <b>especialidad</b>, un <b>profesional</b> o ambos. Si no aparece en las sugerencias, escribilo igual.';
+    form.before(help);
+  }
 
   const goalLabel=$('label[for="goalInput"]'),simplify=$('#simplifyBtn'),reset=$('#resetBtn');
   if(goalLabel)goalLabel.textContent='Escribí qué gestión querés hacer en Salud Central';
-  if(simplify){
-    simplify.textContent='Mostrarme qué tocar';
-    const keepCtaCopy=()=>{if(!simplify.disabled&&simplify.textContent!=='Mostrarme qué tocar')simplify.textContent='Mostrarme qué tocar';};
-    new MutationObserver(()=>queueMicrotask(keepCtaCopy)).observe(simplify,{childList:true,subtree:true,characterData:true});
-  }
+  if(simplify){simplify.textContent='Mostrarme qué tocar';const keep=()=>{if(!simplify.disabled&&simplify.textContent!=='Mostrarme qué tocar')simplify.textContent='Mostrarme qué tocar';};new MutationObserver(()=>queueMicrotask(keep)).observe(simplify,{childList:true,subtree:true,characterData:true});}
   if(reset)reset.textContent='Empezar de nuevo';
 
   const consoleHead=$('.clarity-console .console-head');
   if(consoleHead&&!$('.nc-demo-purpose')){
-    const box=document.createElement('div');
-    box.className='nc-demo-purpose';
-    box.innerHTML='<span class="nc-kicker">1 · PEDÍ AYUDA ACÁ</span><strong>Decime qué querés hacer en Salud Central.</strong><p>Escribilo con tus palabras. NavegaClaro te indica <b>qué tocar</b> en el portal de abajo. Los botones rápidos son ejemplos de acciones, no una lista de especialidades ni un límite del sistema.</p><div class="nc-flow"><span><b>1</b>Escribí tu objetivo</span><span><b>2</b>Leé la indicación</span><span><b>3</b>Hacé la acción abajo</span></div>';
-    consoleHead.insertAdjacentElement('afterend',box);
+    const box=document.createElement('div');box.className='nc-demo-purpose';box.innerHTML='<span class="nc-kicker">1 · PEDÍ AYUDA ACÁ</span><strong>Decime qué querés hacer en Salud Central.</strong><p>NavegaClaro te indica <b>qué control usar</b> y lo marca en el portal. Vos hacés la acción.</p><div class="nc-flow"><span><b>1</b>Escribí tu objetivo</span><span><b>2</b>Leé la indicación</span><span><b>3</b>Usá el control marcado</span></div>';consoleHead.insertAdjacentElement('afterend',box);
   }
 
   const portal=$('#portal');
-  if(portal&&!$('.nc-portal-marker')){
-    const marker=document.createElement('div');
-    marker.className='nc-portal-marker';
-    marker.innerHTML='<strong>3 · SALUD CENTRAL — ACÁ HACÉS LA TAREA</strong><span>Seguí la indicación de NavegaClaro.</span>';
-    portal.prepend(marker);
-  }
-
+  if(portal&&!$('.nc-portal-marker')){const marker=document.createElement('div');marker.className='nc-portal-marker';marker.innerHTML='<strong>SALUD CENTRAL — ACÁ HACÉS LA TAREA</strong><span>NavegaClaro marca el control que tenés que usar.</span>';portal.prepend(marker);}
   const guide=$('#guide');
-  if(guide&&!$('.nc-guide-action-label',guide)){
-    const label=document.createElement('div');
-    label.className='nc-guide-action-label';
-    label.textContent='2 · LEÉ ESTA INDICACIÓN Y HACELA EN SALUD CENTRAL ↓';
-    guide.prepend(label);
-  }
+  if(guide&&!$('.nc-guide-action-label',guide)){const label=document.createElement('div');label.className='nc-guide-action-label';label.textContent='GUÍA ACTIVA · USÁ EL CONTROL MARCADO EN VERDE ↓';guide.prepend(label);}
 
   const examplesWrap=$('.example-goals');
-  if(examplesWrap){
-    const examples=[...examplesWrap.querySelectorAll('[data-goal]')];
-    if(examples[0]){examples[0].textContent='Ejemplo: sacar un turno';examples[0].dataset.goal='Quiero sacar un turno';}
-    if(examples[1]){examples[1].textContent='Ejemplo: buscar horarios';examples[1].dataset.goal='Necesito buscar horarios para un turno';}
-    if(!$('.nc-examples-note')){
-      const note=document.createElement('p');note.className='nc-examples-note';note.textContent='Ejemplos de tareas — podés escribir cualquier gestión disponible en el portal.';examplesWrap.before(note);
-    }
-    if(!$('[data-nc-extra-example]',examplesWrap)){
-      const extra=document.createElement('button');extra.type='button';extra.dataset.ncExtraExample='1';extra.textContent='Ejemplo: elegir sede';
-      extra.addEventListener('click',()=>{const input=$('#goalInput');if(input){input.value='Quiero elegir una sede para mi turno';input.focus();}});
-      examplesWrap.appendChild(extra);
-    }
-  }
+  if(examplesWrap){const examples=[...examplesWrap.querySelectorAll('[data-goal]')];if(examples[0]){examples[0].textContent='Ejemplo: sacar un turno';examples[0].dataset.goal='Quiero sacar un turno';}if(examples[1]){examples[1].textContent='Ejemplo: buscar horarios';examples[1].dataset.goal='Necesito buscar horarios para un turno';}if(!$('.nc-examples-note')){const note=document.createElement('p');note.className='nc-examples-note';note.textContent='Son ejemplos. Podés escribir otra gestión con tus palabras.';examplesWrap.before(note);}}
 
   const style=document.createElement('style');
   style.textContent=`
-    .nc-demo-purpose{margin:12px 0 18px;padding:16px;border:2px solid rgba(184,255,90,.48);border-radius:14px;background:#151c17;display:grid;gap:8px}.nc-kicker{color:#b8ff5a;font-size:.72rem;font-weight:950;letter-spacing:.08em}.nc-demo-purpose strong{color:#fff;font-size:1.05rem}.nc-demo-purpose p{margin:0;color:#eef3f6;font-size:.86rem;line-height:1.5}.nc-demo-purpose p b{color:#b8ff5a}.nc-flow{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.nc-flow span{padding:9px 8px;border:1px solid #354039;border-radius:10px;background:#0f1411;color:#fff;font-size:.7rem;text-align:center}.nc-flow b{display:block;color:#142000;background:#b8ff5a;width:24px;height:24px;line-height:24px;border-radius:999px;margin:0 auto 6px}.nc-examples-note{margin:2px 0 7px;color:#e6edf3;font-size:.74rem;font-weight:800}.nc-portal-marker{display:flex;justify-content:space-between;gap:12px;padding:12px 14px;background:#dff4ff;color:#0f3650;border-bottom:2px solid #8cc6e3;font-size:.76rem}.nc-portal-marker span{color:#1d4d68;font-weight:650}.nc-guide-action-label{margin:0 0 12px;padding:10px;border-radius:9px;background:#b8ff5a;color:#142000;font-size:.7rem;font-weight:950;text-align:center}.nc-slots{margin-top:16px;border:1px solid #cbd5e1;border-radius:12px;background:#fff;padding:16px}.nc-slots[hidden],.nc-booking[hidden]{display:none!important}.nc-slots[data-state="error"]{background:#fff7ed;border-color:#fdba74}.nc-slots-title{font-size:1rem;font-weight:850;color:#0f172a;margin:0 0 6px}.nc-slots-copy{font-size:.86rem;line-height:1.5;color:#334155;margin:0 0 12px}.nc-slots[data-state="error"] .nc-slots-title{color:#9a3412}.nc-slots[data-state="error"] .nc-slots-copy{color:#7c2d12}.nc-slot-list{display:flex;gap:8px;flex-wrap:wrap}.nc-slot{min-width:82px;min-height:44px;border:1px solid #7f9aae;background:#fff;color:#0e4c78;border-radius:9px;font-weight:800;padding:8px 12px}.nc-slot[aria-pressed="true"]{background:#1261a0;color:#fff}.nc-booking{margin-top:14px;padding:14px;border:1px solid #cbd5e1;border-radius:11px;background:#f8fafc}.nc-booking-summary{font-size:.82rem;line-height:1.5;color:#1e293b;font-weight:620}.nc-booking-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.nc-booking label{display:flex;flex-direction:column;gap:5px;font-size:.76rem;font-weight:750;color:#334155}.nc-booking input,.nc-booking select{min-height:44px;border:1px solid #94a3b8;border-radius:8px;padding:0 9px;background:#fff;color:#0f172a}.nc-booking button{width:100%;min-height:44px;margin-top:12px;border:0;border-radius:9px;background:#1261a0;color:#fff;font-weight:800}.nc-status{margin-top:10px;min-height:20px;font-size:.8rem;line-height:1.45;color:#334155}.nc-status[data-state="error"]{color:#991b1b;font-weight:700}.nc-status[data-state="success"]{color:#166534;font-weight:800}@media(max-width:620px){.nc-flow{grid-template-columns:1fr}.nc-flow span{display:flex;align-items:center;gap:8px;text-align:left}.nc-flow b{margin:0}.nc-booking-grid{grid-template-columns:1fr}.nc-slot{flex:1 1 28%}.nc-portal-marker{flex-direction:column}}
-  `;
-  document.head.appendChild(style);
+    .nc-search-help{grid-column:1/-1;margin:0 0 14px;padding:12px 14px;border:1px solid #b8d8e9;border-radius:10px;background:#eef8fd;color:#153f58;font-size:.8rem;line-height:1.45}.nc-search-help strong{display:block;color:#0f3650;margin-bottom:3px}.nc-search-help b{color:#0b5c8e}.form-grid input[list]{min-height:44px;border:1px solid #9daab6;border-radius:8px;padding:0 10px;background:#fff;color:#17202a;width:100%}.form-grid input[list]::placeholder{color:#64748b}.nc-demo-purpose{margin:12px 0 18px;padding:16px;border:2px solid rgba(184,255,90,.48);border-radius:14px;background:#151c17;display:grid;gap:8px}.nc-kicker{color:#b8ff5a;font-size:.72rem;font-weight:950;letter-spacing:.08em}.nc-demo-purpose strong{color:#fff;font-size:1.05rem}.nc-demo-purpose p{margin:0;color:#eef3f6;font-size:.86rem;line-height:1.5}.nc-demo-purpose p b{color:#b8ff5a}.nc-flow{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.nc-flow span{padding:9px 8px;border:1px solid #354039;border-radius:10px;background:#0f1411;color:#fff;font-size:.7rem;text-align:center}.nc-flow b{display:block;color:#142000;background:#b8ff5a;width:24px;height:24px;line-height:24px;border-radius:999px;margin:0 auto 6px}.nc-examples-note{margin:2px 0 7px;color:#e6edf3;font-size:.74rem;font-weight:800}.nc-portal-marker{display:flex;justify-content:space-between;gap:12px;padding:12px 14px;background:#dff4ff;color:#0f3650;border-bottom:2px solid #8cc6e3;font-size:.76rem}.nc-portal-marker span{color:#1d4d68;font-weight:650}.nc-guide-action-label{margin:0 0 12px;padding:10px;border-radius:9px;background:#b8ff5a;color:#142000;font-size:.7rem;font-weight:950;text-align:center}.nc-slots{margin-top:16px;border:1px solid #cbd5e1;border-radius:12px;background:#fff;padding:16px}.nc-slots[hidden],.nc-booking[hidden]{display:none!important}.nc-slots[data-state="error"]{background:#fff7ed;border-color:#fdba74}.nc-slots-title{font-size:1rem;font-weight:850;color:#0f172a;margin:0 0 6px}.nc-slots-copy{font-size:.86rem;line-height:1.5;color:#334155;margin:0 0 12px}.nc-slots[data-state="error"] .nc-slots-title{color:#9a3412}.nc-slots[data-state="error"] .nc-slots-copy{color:#7c2d12}.nc-slot-list{display:flex;gap:8px;flex-wrap:wrap}.nc-slot{min-width:82px;min-height:44px;border:1px solid #7f9aae;background:#fff;color:#0e4c78;border-radius:9px;font-weight:800;padding:8px 12px}.nc-slot[aria-pressed="true"]{background:#1261a0;color:#fff}.nc-booking{margin-top:14px;padding:14px;border:1px solid #cbd5e1;border-radius:11px;background:#f8fafc}.nc-booking-summary{font-size:.82rem;line-height:1.5;color:#1e293b;font-weight:620}.nc-booking-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.nc-booking label{display:flex;flex-direction:column;gap:5px;font-size:.76rem;font-weight:750;color:#334155}.nc-booking input,.nc-booking select{min-height:44px;border:1px solid #94a3b8;border-radius:8px;padding:0 9px;background:#fff;color:#0f172a}.nc-booking button{width:100%;min-height:44px;margin-top:12px;border:0;border-radius:9px;background:#1261a0;color:#fff;font-weight:800}.nc-status{margin-top:10px;min-height:20px;font-size:.8rem;line-height:1.45;color:#334155}.nc-status[data-state="error"]{color:#991b1b;font-weight:700}.nc-status[data-state="success"]{color:#166534;font-weight:800}@media(max-width:620px){.nc-flow{grid-template-columns:1fr}.nc-flow span{display:flex;align-items:center;gap:8px;text-align:left}.nc-flow b{margin:0}.nc-booking-grid{grid-template-columns:1fr}.nc-slot{flex:1 1 45%}.nc-portal-marker{flex-direction:column}}
+  `;document.head.appendChild(style);
 
-  const panel=document.createElement('section');
-  panel.className='nc-slots';panel.hidden=true;panel.setAttribute('aria-live','polite');
-  panel.innerHTML='<p class="nc-slots-title">Horarios disponibles</p><p class="nc-slots-copy">Consultando disponibilidad.</p><div class="nc-slot-list"></div><div class="nc-booking" hidden><p class="nc-booking-summary"></p><div class="nc-booking-grid"><label>Nombre<input id="ncName" autocomplete="name" maxlength="80"></label><label>Recibir por<select id="ncChannel"><option value="email">Email</option><option value="whatsapp">WhatsApp</option></select></label><label id="ncEmailWrap">Email<input id="ncEmail" type="email" autocomplete="email"></label><label id="ncWhatsappWrap" hidden>WhatsApp<input id="ncWhatsapp" inputmode="tel" autocomplete="tel"></label></div><button id="ncConfirm" type="button">Confirmar turno y recordatorios</button><div id="ncBookingStatus" class="nc-status" role="status"></div></div>';
-  actions.insertAdjacentElement('afterend',panel);
+  const panel=document.createElement('section');panel.className='nc-slots';panel.hidden=true;panel.setAttribute('aria-live','polite');panel.innerHTML='<p class="nc-slots-title">Horarios disponibles</p><p class="nc-slots-copy">Consultando disponibilidad.</p><div class="nc-slot-list"></div><div class="nc-booking" hidden><p class="nc-booking-summary"></p><div class="nc-booking-grid"><label>Nombre<input id="ncName" autocomplete="name" maxlength="80"></label><label>Recibir por<select id="ncChannel"><option value="email">Email</option><option value="whatsapp">WhatsApp</option></select></label><label id="ncEmailWrap">Email<input id="ncEmail" type="email" autocomplete="email"></label><label id="ncWhatsappWrap" hidden>WhatsApp<input id="ncWhatsapp" inputmode="tel" autocomplete="tel"></label></div><button id="ncConfirm" type="button">Confirmar turno y recordatorios</button><div id="ncBookingStatus" class="nc-status" role="status"></div></div>';actions.insertAdjacentElement('afterend',panel);
 
-  const list=$('.nc-slot-list',panel),booking=$('.nc-booking',panel),summary=$('.nc-booking-summary',panel),channel=$('#ncChannel',panel),emailWrap=$('#ncEmailWrap',panel),whatsappWrap=$('#ncWhatsappWrap',panel),confirm=$('#ncConfirm',panel),status=$('#ncBookingStatus',panel);
-  let selectedSlot=null;
+  const list=$('.nc-slot-list',panel),booking=$('.nc-booking',panel),summary=$('.nc-booking-summary',panel),channel=$('#ncChannel',panel),emailWrap=$('#ncEmailWrap',panel),whatsappWrap=$('#ncWhatsappWrap',panel),confirm=$('#ncConfirm',panel),status=$('#ncBookingStatus',panel);let selectedSlot=null;
+  button.addEventListener('click',searchAvailability);channel.addEventListener('change',()=>{const email=channel.value==='email';emailWrap.hidden=!email;whatsappWrap.hidden=email;status.textContent='';});confirm.addEventListener('click',confirmAppointment);
 
-  button.addEventListener('click',searchAvailability);
-  channel.addEventListener('change',()=>{const email=channel.value==='email';emailWrap.hidden=!email;whatsappWrap.hidden=email;status.textContent='';});
-  confirm.addEventListener('click',confirmAppointment);
+  async function searchAvailability(){const query={specialty:specialty?.value.trim()||'',professional:professional?.value.trim()||'',location:locationField?.value||'',date:dateField?.value||''};if((!query.specialty&&!query.professional)||!query.location||!query.date){showMessage('Escribí una especialidad o un profesional y elegí sede y fecha.','error');return;}selectedSlot=null;booking.hidden=true;list.innerHTML='';panel.hidden=false;panel.dataset.state='';$('.nc-slots-title',panel).textContent='Buscando horarios…';$('.nc-slots-copy',panel).textContent='Consultando la disponibilidad.';button.disabled=true;const original=button.textContent;button.textContent='Buscando…';try{const response=await fetch('/api/availability',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(query)});const data=await response.json().catch(()=>({}));if(!response.ok||data.ok===false)throw new Error(data.error||'No se pudo buscar disponibilidad.');renderSlots(Array.isArray(data.slots)?data.slots:[],query);}catch(error){showMessage(error?.message||'No se pudo consultar la disponibilidad.','error');}finally{button.disabled=false;button.textContent=original;}}
 
-  async function searchAvailability(){
-    const query={specialty:specialty?.value||'',professional:professional?.value||'',location:locationField?.value||'',date:dateField?.value||''};
-    if(!query.specialty||!query.professional||!query.location||!query.date){showMessage('Completá especialidad, profesional, sede y fecha para buscar horarios.','error');return;}
-    selectedSlot=null;booking.hidden=true;list.innerHTML='';panel.hidden=false;panel.dataset.state='';$('.nc-slots-title',panel).textContent='Buscando horarios…';$('.nc-slots-copy',panel).textContent='Consultando la disponibilidad.';button.disabled=true;const original=button.textContent;button.textContent='Buscando…';
-    try{const response=await fetch('/api/availability',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(query)});const data=await response.json().catch(()=>({}));if(!response.ok||data.ok===false)throw new Error(data.error||'No se pudo buscar disponibilidad.');renderSlots(Array.isArray(data.slots)?data.slots:[]);}catch(error){showMessage(error?.message||'No se pudo consultar la disponibilidad.','error');}finally{button.disabled=false;button.textContent=original;}
-  }
-
-  function renderSlots(slots){panel.hidden=false;panel.dataset.state='';list.innerHTML='';booking.hidden=true;selectedSlot=null;$('.nc-slots-title',panel).textContent=slots.length?'Elegí un horario':'Sin horarios disponibles';$('.nc-slots-copy',panel).textContent=slots.length?`${slots.length} horario${slots.length===1?'':'s'} encontrado${slots.length===1?'':'s'}.`:'No encontramos disponibilidad para esa combinación. Probá otra fecha, sede o profesional.';slots.forEach(slot=>{const b=document.createElement('button');b.type='button';b.className='nc-slot';b.textContent=slot.time;b.setAttribute('aria-pressed','false');b.addEventListener('click',()=>selectSlot(slot,b));list.appendChild(b);});}
-
+  function renderSlots(slots,query){panel.hidden=false;panel.dataset.state='';list.innerHTML='';booking.hidden=true;selectedSlot=null;$('.nc-slots-title',panel).textContent=slots.length?'Elegí un horario':'No hay horarios cargados para esa búsqueda';$('.nc-slots-copy',panel).textContent=slots.length?`${slots.length} horario${slots.length===1?'':'s'} encontrado${slots.length===1?'':'s'}.`:'Esto no significa que Salud Central no atienda esa especialidad o profesional; solo que no hay disponibilidad cargada en esta demo para esos datos.';slots.forEach(slot=>{const b=document.createElement('button');b.type='button';b.className='nc-slot';const context=!query.professional?slot.professional:(!query.specialty?slot.specialty:'');b.textContent=context?`${slot.time} · ${context}`:slot.time;b.setAttribute('aria-pressed','false');b.addEventListener('click',()=>selectSlot(slot,b));list.appendChild(b);});}
   function selectSlot(slot,control){selectedSlot=slot;list.querySelectorAll('.nc-slot').forEach(b=>b.setAttribute('aria-pressed',String(b===control)));summary.textContent=`${slot.specialty} · ${slot.professional} · ${slot.location} · ${formatDate(slot.date)} a las ${slot.time}`;booking.hidden=false;status.textContent='';}
-
   async function confirmAppointment(){if(!selectedSlot){setStatus('Primero elegí un horario.','error');return;}if(consent&&!consent.checked){setStatus('Aceptá los recordatorios y comunicaciones administrativas para continuar.','error');consent.focus();return;}const name=$('#ncName',panel).value.trim(),email=$('#ncEmail',panel).value.trim(),whatsapp=$('#ncWhatsapp',panel).value.trim();if(!name){setStatus('Ingresá tu nombre.','error');return;}const payload={appointmentId:selectedSlot.slotId,appointmentAt:`${selectedSlot.date}T${selectedSlot.time}:00-03:00`,name,email,whatsapp,channel:channel.value,service:selectedSlot.specialty,professional:selectedSlot.professional,location:selectedSlot.location};confirm.disabled=true;confirm.textContent='Confirmando…';try{const response=await fetch('/api/appointments',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const data=await response.json().catch(()=>({}));if(!response.ok||data.ok===false)throw new Error(data.error||'No se pudo confirmar el turno.');setStatus(`Turno confirmado. Recordatorios programados por ${channel.value==='email'?'email':'WhatsApp'}.`,'success');confirm.textContent='Turno confirmado';}catch(error){setStatus(error?.message||'No se pudo confirmar el turno.','error');confirm.disabled=false;confirm.textContent='Confirmar turno y recordatorios';}}
 
-  function syncProfessionals(){if(!specialty||!professional)return;const names=PROFESSIONALS[specialty.value]||['Dra. Paula Gómez','Dr. Martín Ruiz','Lic. Laura Sosa'];professional.innerHTML='<option value="">Seleccionar</option>';names.forEach(name=>professional.add(new Option(name,name)));}
-  function showMessage(message,state){panel.hidden=false;panel.dataset.state=state||'';list.innerHTML='';booking.hidden=true;$('.nc-slots-title',panel).textContent=state==='error'?'No se pudo consultar los horarios':'Disponibilidad';$('.nc-slots-copy',panel).textContent=message;}
+  function replaceSelectWithSearch(select,listId,options,placeholder){if(!select)return null;const input=document.createElement('input');input.id=select.id;input.type='text';input.setAttribute('list',listId);input.setAttribute('autocomplete','off');input.placeholder=placeholder;input.value='';const data=document.createElement('datalist');data.id=listId;options.forEach(value=>{const option=document.createElement('option');option.value=value;data.appendChild(option);});select.replaceWith(input);input.insertAdjacentElement('afterend',data);return input;}
+  function showMessage(message,state){panel.hidden=false;panel.dataset.state=state||'';list.innerHTML='';booking.hidden=true;$('.nc-slots-title',panel).textContent=state==='error'?'Revisá la búsqueda':'Disponibilidad';$('.nc-slots-copy',panel).textContent=message;}
   function setStatus(message,state){status.textContent=message;status.dataset.state=state||'';}
   function formatDate(value){try{return new Intl.DateTimeFormat('es-AR',{dateStyle:'long',timeZone:'America/Argentina/Cordoba'}).format(new Date(`${value}T12:00:00-03:00`));}catch{return value;}}
 })();
