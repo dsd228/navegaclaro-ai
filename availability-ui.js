@@ -10,8 +10,61 @@
   const consent=document.querySelector('.portal-terms input[type="checkbox"]');
   const actions=button.closest('.portal-actions');
 
+  const PROFESSIONALS={
+    'Clínica médica':['Dr. Martín Ruiz'],
+    'Dermatología':['Dra. Paula Gómez'],
+    'Oftalmología':['Dr. Martín Ruiz'],
+    'Kinesiología':['Lic. Laura Sosa']
+  };
+
+  if(specialty&&!Array.from(specialty.options).some(o=>o.value==='Kinesiología')){
+    specialty.add(new Option('Kinesiología','Kinesiología'));
+  }
+  syncProfessionals();
+  specialty?.addEventListener('change',syncProfessionals);
+
+  const consolePanel=document.querySelector('.clarity-console');
+  const consoleHead=consolePanel?.querySelector('.console-head');
+  if(consoleHead&&!document.querySelector('.nc-demo-purpose')){
+    const purpose=document.createElement('div');
+    purpose.className='nc-demo-purpose';
+    purpose.innerHTML='<strong>NavegaClaro es tu guía.</strong><span>Podés pedir ayuda para cualquier gestión disponible en este portal. Después hacé las acciones en <b>Salud Central</b>; NavegaClaro no las hace por vos.</span><small>En esta demo: Clínica médica · Dermatología · Oftalmología · Kinesiología.</small>';
+    consoleHead.insertAdjacentElement('afterend',purpose);
+  }
+
+  const portal=document.querySelector('#portal');
+  if(portal&&!document.querySelector('.nc-portal-marker')){
+    const marker=document.createElement('div');
+    marker.className='nc-portal-marker';
+    marker.innerHTML='<strong>ACÁ HACÉS LA TAREA</strong><span>Usá este portal siguiendo la indicación de NavegaClaro.</span>';
+    portal.prepend(marker);
+  }
+
+  const guide=document.querySelector('#guide');
+  if(guide&&!guide.querySelector('.nc-guide-action-label')){
+    const label=document.createElement('div');
+    label.className='nc-guide-action-label';
+    label.textContent='AHORA HACÉ ESTA ACCIÓN EN SALUD CENTRAL ↓';
+    guide.prepend(label);
+  }
+
+  const examples=[...document.querySelectorAll('.example-goals [data-goal]')];
+  if(examples[0]){examples[0].textContent='Oftalmología';examples[0].dataset.goal='Quiero sacar un turno con oftalmología';}
+  if(examples[1]){examples[1].textContent='Kinesiología';examples[1].dataset.goal='Quiero sacar un turno con kinesiología';}
+  const examplesWrap=document.querySelector('.example-goals');
+  if(examplesWrap&&!examplesWrap.querySelector('[data-nc-extra-example]')){
+    const extra=document.createElement('button');extra.type='button';extra.dataset.ncExtraExample='1';extra.textContent='Buscar horarios';
+    extra.addEventListener('click',()=>{const input=document.querySelector('#goalInput');if(input){input.value='Necesito buscar horarios para un turno';input.focus();}});
+    examplesWrap.appendChild(extra);
+  }
+
   const style=document.createElement('style');
   style.textContent=`
+    .nc-demo-purpose{margin:12px 0 16px;padding:13px 14px;border:1px solid rgba(184,255,90,.28);border-radius:12px;background:rgba(184,255,90,.06);display:grid;gap:5px}
+    .nc-demo-purpose strong{color:#f7f9fb;font-size:.86rem}.nc-demo-purpose span{color:#c4ccd5;font-size:.76rem;line-height:1.45}.nc-demo-purpose small{color:#b8ff5a;font-size:.7rem;line-height:1.4;font-weight:750}
+    .nc-portal-marker{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;background:#dff4ff;color:#123e5a;border-bottom:1px solid #b8d8e9;font-size:.72rem}
+    .nc-portal-marker strong{font-size:.75rem;letter-spacing:.06em}.nc-portal-marker span{text-align:right;line-height:1.35}
+    .nc-guide-action-label{margin:0 0 12px;padding:9px 10px;border-radius:9px;background:rgba(184,255,90,.10);color:#b8ff5a;font-size:.69rem;font-weight:900;letter-spacing:.06em;text-align:center}
     .nc-slots{margin-top:16px;border-top:1px solid #e1e6ea;padding-top:16px}
     .nc-slots[hidden]{display:none!important}
     .nc-slots-title{font-size:.85rem;font-weight:800;color:#26323d;margin:0 0 5px}
@@ -29,7 +82,7 @@
     .nc-booking button:disabled{opacity:.55;cursor:wait}
     .nc-status{margin-top:10px;min-height:20px;font-size:.74rem;line-height:1.45;color:#5f6d79}
     .nc-status[data-state="error"]{color:#9a3131}.nc-status[data-state="success"]{color:#246b36;font-weight:700}
-    @media(max-width:620px){.nc-booking-grid{grid-template-columns:1fr}.nc-slot{flex:1 1 28%}}
+    @media(max-width:620px){.nc-booking-grid{grid-template-columns:1fr}.nc-slot{flex:1 1 28%}.nc-portal-marker{align-items:flex-start;flex-direction:column}.nc-portal-marker span{text-align:left}}
   `;
   document.head.appendChild(style);
 
@@ -94,6 +147,13 @@
     }catch(error){setStatus(error?.message||'No se pudo confirmar el turno.','error');confirm.disabled=false;confirm.textContent='Confirmar turno y recordatorios';}
   }
 
+  function syncProfessionals(){
+    if(!specialty||!professional)return;
+    const current=specialty.value;
+    const list=PROFESSIONALS[current]||['Dra. Paula Gómez','Dr. Martín Ruiz','Lic. Laura Sosa'];
+    professional.innerHTML='<option value="">Seleccionar</option>';
+    list.forEach(name=>professional.add(new Option(name,name)));
+  }
   function showPanelMessage(message,state){panel.hidden=false;list.innerHTML='';booking.hidden=true;panel.querySelector('.nc-slots-title').textContent=state==='error'?'No pudimos buscar todavía':'Disponibilidad';panel.querySelector('.nc-slots-copy').textContent=message;}
   function setStatus(message,state){status.textContent=message;status.dataset.state=state||'';}
   function formatDate(value){try{return new Intl.DateTimeFormat('es-AR',{dateStyle:'long',timeZone:'America/Argentina/Cordoba'}).format(new Date(`${value}T12:00:00-03:00`));}catch{return value;}}
