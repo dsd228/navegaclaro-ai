@@ -1,16 +1,16 @@
 const testForm=document.querySelector('#testForm');const qaForm=document.querySelector('#qaForm');
 
 const TEST_PLAN=[
-  {participant:'P01',condition:'sin',task:'A · Dermatología · Dra. Paula Gómez · sede Norte · 27/08/2026 · llegar a Buscar horarios'},
-  {participant:'P01',condition:'con',task:'B · Dermatología · Dra. Paula Gómez · sede Centro · 27/08/2026 · llegar a Buscar horarios'},
-  {participant:'P02',condition:'con',task:'A · Dermatología · Dra. Paula Gómez · sede Norte · 27/08/2026 · llegar a Buscar horarios'},
-  {participant:'P02',condition:'sin',task:'B · Dermatología · Dra. Paula Gómez · sede Centro · 27/08/2026 · llegar a Buscar horarios'},
-  {participant:'P03',condition:'sin',task:'A · Dermatología · Dra. Paula Gómez · sede Norte · 27/08/2026 · llegar a Buscar horarios'},
-  {participant:'P03',condition:'con',task:'B · Dermatología · Dra. Paula Gómez · sede Centro · 27/08/2026 · llegar a Buscar horarios'},
-  {participant:'P04',condition:'con',task:'A · Dermatología · Dra. Paula Gómez · sede Norte · 27/08/2026 · llegar a Buscar horarios'},
-  {participant:'P04',condition:'sin',task:'B · Dermatología · Dra. Paula Gómez · sede Centro · 27/08/2026 · llegar a Buscar horarios'},
-  {participant:'P05',condition:'sin',task:'A · Dermatología · Dra. Paula Gómez · sede Norte · 27/08/2026 · llegar a Buscar horarios'},
-  {participant:'P05',condition:'con',task:'B · Dermatología · Dra. Paula Gómez · sede Centro · 27/08/2026 · llegar a Buscar horarios'}
+  {participant:'P01',condition:'sin',task:'A · Dermatología · Dra. Paula Gómez · sede Centro · 27/08/2026 · llegar a Buscar horarios'},
+  {participant:'P01',condition:'con',task:'B · Oftalmología · Dr. Martín Ruiz · sede Norte · 27/08/2026 · llegar a Buscar horarios'},
+  {participant:'P02',condition:'con',task:'A · Dermatología · Dra. Paula Gómez · sede Centro · 27/08/2026 · llegar a Buscar horarios'},
+  {participant:'P02',condition:'sin',task:'B · Oftalmología · Dr. Martín Ruiz · sede Norte · 27/08/2026 · llegar a Buscar horarios'},
+  {participant:'P03',condition:'sin',task:'A · Dermatología · Dra. Paula Gómez · sede Centro · 27/08/2026 · llegar a Buscar horarios'},
+  {participant:'P03',condition:'con',task:'B · Oftalmología · Dr. Martín Ruiz · sede Norte · 27/08/2026 · llegar a Buscar horarios'},
+  {participant:'P04',condition:'con',task:'A · Dermatología · Dra. Paula Gómez · sede Centro · 27/08/2026 · llegar a Buscar horarios'},
+  {participant:'P04',condition:'sin',task:'B · Oftalmología · Dr. Martín Ruiz · sede Norte · 27/08/2026 · llegar a Buscar horarios'},
+  {participant:'P05',condition:'sin',task:'A · Dermatología · Dra. Paula Gómez · sede Centro · 27/08/2026 · llegar a Buscar horarios'},
+  {participant:'P05',condition:'con',task:'B · Oftalmología · Dr. Martín Ruiz · sede Norte · 27/08/2026 · llegar a Buscar horarios'}
 ];
 const PLAN_KEY='navegaclaro-test-plan-index-v1';
 let testPlanIndex=Math.max(0,Math.min(TEST_PLAN.length,Number(localStorage.getItem(PLAN_KEY)||0)));
