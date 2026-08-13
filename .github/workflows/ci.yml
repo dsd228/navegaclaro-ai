@@ -25,6 +25,7 @@ jobs:
         run: |
           node --check api/analyze.js
           node --check api/evidence.js
+          node --check api/appointments.js
           node --check api/health.js
           node --check lib/analyzer.js
           node --check app.js
@@ -45,11 +46,15 @@ jobs:
           console.log(`Manifest OK — v${manifest.version}`);
           NODE
 
-      - name: Validate evidence assets
+      - name: Validate evidence and automation assets
         run: |
           test -f google-apps-script/Code.gs
+          test -f automation/n8n-navegaclaro-turnos-reminders.json
+          node -e "const fs=require('fs'); const w=JSON.parse(fs.readFileSync('automation/n8n-navegaclaro-turnos-reminders.json','utf8')); if(!w.nodes?.length) process.exit(1); console.log('n8n workflow JSON OK')"
           grep -q 'GOOGLE_SHEETS_WEBAPP_URL' api/evidence.js
           grep -q 'EVIDENCE_ADMIN_TOKEN' api/evidence.js
+          grep -q 'N8N_APPOINTMENT_WEBHOOK_URL' api/appointments.js
+          grep -q 'N8N_SHARED_SECRET' api/appointments.js
           grep -q 'TEST_USUARIOS' google-apps-script/Code.gs
           grep -q 'SESIONES' google-apps-script/Code.gs
           grep -q 'QA' google-apps-script/Code.gs
