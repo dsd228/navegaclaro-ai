@@ -32,14 +32,23 @@ Avanzar 3–4 pasos. No explicar código mientras ocurre la transformación.
 
 ## 0:58–1:22 — evidencia
 
-### Si ya existen tests reales
+### Si ya existen los 10 registros reales
 
-> “Lo probamos con cinco participantes usando tareas equivalentes y orden contrabalanceado. [DECIR SOLO RESULTADOS REALES: éxito, tiempo o errores].”
+Usar exactamente las mismas métricas que en `docs/CODERCUP_TALLY_DRAFT.md`:
 
-Visual: máximo dos métricas grandes. Ejemplo de formato, nunca inventar números:
+> “Lo probamos con cinco participantes usando tareas equivalentes y orden contrabalanceado. La finalización pasó de {{FINALIZACION_SIN}} a {{FINALIZACION_CON}} y el tiempo medio pasó de {{TIEMPO_SIN}} a {{TIEMPO_CON}}.”
 
-- Finalización: X/5 → Y/5
-- Tiempo medio: X s → Y s
+Visual: máximo dos métricas grandes.
+
+- Finalización: `{{FINALIZACION_SIN}} → {{FINALIZACION_CON}}`
+- Tiempo medio: `{{TIEMPO_SIN}} → {{TIEMPO_CON}}`
+
+Opcional, solo si aporta una señal clara y real:
+
+- Errores: `{{ERRORES_SIN}} → {{ERRORES_CON}}`
+- Facilidad: `{{FACILIDAD_SIN}} → {{FACILIDAD_CON}}`
+
+**No reemplazar estos tokens hasta que `TEST_USUARIOS` tenga 10 registros reales.**
 
 ### Si todavía no hay población objetivo específica
 
