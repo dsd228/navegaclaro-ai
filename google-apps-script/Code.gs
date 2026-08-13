@@ -2,10 +2,11 @@ const NC_SHEETS={
   TEST_USUARIOS:['timestamp','participant','condition','task','success','timeSeconds','errors','help','ease','quote','notes'],
   SESIONES:['timestamp','sessionId','event','goal','domain','controls','steps','mode','latencyMs','completed'],
   QA:['timestamp','web','goal','result','steps','validTargets','latencyMs','notes'],
-  METRICAS:['timestamp','participants','withoutSuccessRate','withSuccessRate','withoutAvgTime','withAvgTime','withoutErrors','withErrors','withoutEase','withEase']
+  METRICAS:['timestamp','participants','withoutSuccessRate','withSuccessRate','withoutAvgTime','withAvgTime','withoutErrors','withErrors','withoutEase','withEase'],
+  DISPONIBILIDAD:['slot_id','especialidad','profesional','sede','fecha','hora','disponible','origen']
 };
 
-function doGet(e){try{assertSecret_(e&&e.parameter&&e.parameter.secret);ensureSheets_();const action=String((e&&e.parameter&&e.parameter.action)||'summary');if(action!=='summary')return json_({ok:false,error:'Unknown action'});return json_({ok:true,metrics:buildSummary_()});}catch(err){return json_({ok:false,error:String(err&&err.message||err)});}}
+function doGet(e){try{assertSecret_(e&&e.parameter&&e.parameter.secret);ensureSheets_();const action=String((e&&e.parameter&&e.parameter.action)||'summary');if(action==='summary')return json_({ok:true,metrics:buildSummary_()});if(action==='availability')return json_({ok:true,slots:findAvailability_(e&&e.parameter||{})});return json_({ok:false,error:'Unknown action'});}catch(err){return json_({ok:false,error:String(err&&err.message||err)});}}
 
 function doPost(e){try{const body=JSON.parse((e&&e.postData&&e.postData.contents)||'{}');assertSecret_(body.secret);ensureSheets_();const kind=String(body.kind||'');const payload=body.payload||{};if(kind==='session')appendSession_(payload);else if(kind==='test')appendTest_(payload);else if(kind==='qa')appendQa_(payload);else throw new Error('Invalid kind');return json_({ok:true});}catch(err){return json_({ok:false,error:String(err&&err.message||err)});}}
 
@@ -19,6 +20,10 @@ function appendSession_(p){append_('SESIONES',[new Date(),safe_(p.sessionId,100)
 function appendTest_(p){append_('TEST_USUARIOS',[new Date(),safe_(p.participant,40),safe_(p.condition,10),safe_(p.task,160),Boolean(p.success),num_(p.timeSeconds),num_(p.errors),num_(p.help),Math.min(5,Math.max(1,num_(p.ease))),safe_(p.quote,350),safe_(p.notes,500)]);}
 function appendQa_(p){append_('QA',[new Date(),safe_(p.web,180),safe_(p.goal,180),safe_(p.result,10),num_(p.steps),Boolean(p.validTargets),num_(p.latencyMs),safe_(p.notes,500)]);}
 function append_(name,row){const lock=LockService.getScriptLock();lock.waitLock(5000);try{SpreadsheetApp.getActiveSpreadsheet().getSheetByName(name).appendRow(row);}finally{lock.releaseLock();}}
+
+function findAvailability_(p){const specialty=key_(p.especialidad);const professional=key_(p.profesional);const location=key_(p.sede);const date=String(p.fecha||'').trim();if(!specialty||!professional||!location||!/^\d{4}-\d{2}-\d{2}$/.test(date))throw new Error('Invalid availability query');return rows_('DISPONIBILIDAD').filter(r=>truthy_(r.disponible)&&key_(r.especialidad)===specialty&&key_(r.profesional)===professional&&key_(r.sede)===location&&dateIso_(r.fecha)===date).slice(0,12).map(r=>({slotId:safe_(r.slot_id,100),specialty:safe_(r.especialidad,120),professional:safe_(r.profesional,120),location:safe_(r.sede,120),date:dateIso_(r.fecha),time:safe_(r.hora,20),available:true,source:safe_(r.origen,40)||'sheets'}));}
+function dateIso_(value){if(Object.prototype.toString.call(value)==='[object Date]'&&!isNaN(value.getTime()))return Utilities.formatDate(value,'America/Argentina/Cordoba','yyyy-MM-dd');const s=String(value||'').trim();const m=s.match(/\d{4}-\d{2}-\d{2}/);return m?m[0]:s.slice(0,10);}
+function key_(value){return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();}
 
 function buildSummary_(){const tests=rows_('TEST_USUARIOS');const sessions=rows_('SESIONES');const qa=rows_('QA');const without=aggregateTests_(tests.filter(r=>normalizeCondition_(r.condition)==='sin'));const withNc=aggregateTests_(tests.filter(r=>normalizeCondition_(r.condition)==='con'));const participants=new Set(tests.map(r=>String(r.participant||'').trim()).filter(Boolean)).size;const metrics={participants:participants,testRows:tests.length,without:without,with:withNc,sessions:aggregateSessions_(sessions),qa:aggregateQa_(qa)};snapshotMetrics_(metrics);return metrics;}
 
