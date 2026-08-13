@@ -20,14 +20,18 @@
 
   const goalLabel=$('label[for="goalInput"]'),simplify=$('#simplifyBtn'),reset=$('#resetBtn');
   if(goalLabel)goalLabel.textContent='Escribí qué gestión querés hacer en Salud Central';
-  if(simplify)simplify.textContent='Mostrarme qué tocar';
+  if(simplify){
+    simplify.textContent='Mostrarme qué tocar';
+    const keepCtaCopy=()=>{if(!simplify.disabled&&simplify.textContent!=='Mostrarme qué tocar')simplify.textContent='Mostrarme qué tocar';};
+    new MutationObserver(()=>queueMicrotask(keepCtaCopy)).observe(simplify,{childList:true,subtree:true,characterData:true});
+  }
   if(reset)reset.textContent='Empezar de nuevo';
 
   const consoleHead=$('.clarity-console .console-head');
   if(consoleHead&&!$('.nc-demo-purpose')){
     const box=document.createElement('div');
     box.className='nc-demo-purpose';
-    box.innerHTML='<span class="nc-kicker">1 · PEDÍ AYUDA ACÁ</span><strong>Decime qué querés hacer en Salud Central.</strong><p>NavegaClaro te guía paso a paso. <b>No está limitado a Oftalmología o Kinesiología.</b> Los botones de abajo son solo ejemplos rápidos.</p><div class="nc-flow"><span><b>1</b>Escribí tu objetivo</span><span><b>2</b>Leé la indicación</span><span><b>3</b>Hacé la acción abajo</span></div>';
+    box.innerHTML='<span class="nc-kicker">1 · PEDÍ AYUDA ACÁ</span><strong>Decime qué querés hacer en Salud Central.</strong><p>Escribilo con tus palabras. NavegaClaro te indica <b>qué tocar</b> en el portal de abajo. Los botones rápidos son ejemplos de acciones, no una lista de especialidades ni un límite del sistema.</p><div class="nc-flow"><span><b>1</b>Escribí tu objetivo</span><span><b>2</b>Leé la indicación</span><span><b>3</b>Hacé la acción abajo</span></div>';
     consoleHead.insertAdjacentElement('afterend',box);
   }
 
@@ -51,13 +55,13 @@
   if(examplesWrap){
     const examples=[...examplesWrap.querySelectorAll('[data-goal]')];
     if(examples[0]){examples[0].textContent='Ejemplo: sacar un turno';examples[0].dataset.goal='Quiero sacar un turno';}
-    if(examples[1]){examples[1].textContent='Ejemplo: oftalmología';examples[1].dataset.goal='Quiero sacar un turno con oftalmología';}
+    if(examples[1]){examples[1].textContent='Ejemplo: buscar horarios';examples[1].dataset.goal='Necesito buscar horarios para un turno';}
     if(!$('.nc-examples-note')){
-      const note=document.createElement('p');note.className='nc-examples-note';note.textContent='Ejemplos rápidos — no son las únicas opciones.';examplesWrap.before(note);
+      const note=document.createElement('p');note.className='nc-examples-note';note.textContent='Ejemplos de tareas — podés escribir cualquier gestión disponible en el portal.';examplesWrap.before(note);
     }
     if(!$('[data-nc-extra-example]',examplesWrap)){
-      const extra=document.createElement('button');extra.type='button';extra.dataset.ncExtraExample='1';extra.textContent='Ejemplo: buscar horarios';
-      extra.addEventListener('click',()=>{const input=$('#goalInput');if(input){input.value='Necesito buscar horarios para un turno';input.focus();}});
+      const extra=document.createElement('button');extra.type='button';extra.dataset.ncExtraExample='1';extra.textContent='Ejemplo: elegir sede';
+      extra.addEventListener('click',()=>{const input=$('#goalInput');if(input){input.value='Quiero elegir una sede para mi turno';input.focus();}});
       examplesWrap.appendChild(extra);
     }
   }
