@@ -9,6 +9,7 @@
     style.textContent=`
       .nc-live-guide-note{margin:8px 0 10px;padding:9px 10px;border:1px solid rgba(184,255,90,.28);border-radius:10px;background:rgba(184,255,90,.08);color:#f4f8ef;font-size:.76rem;line-height:1.4}
       .nc-live-guide-note b{color:#b8ff5a}
+      #ncEmailWrap[hidden],#ncWhatsappWrap[hidden],.nc-channel-summary{display:none!important}
       @media(max-width:760px){
         body:has(#guide:not([hidden])){padding-bottom:300px}
         #guide:not([hidden]){position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:3000;max-height:42vh;overflow:auto;margin:0!important;padding:14px!important;border:2px solid #b8ff5a!important;border-radius:16px!important;background:#0e1217!important;box-shadow:0 24px 60px rgba(0,0,0,.62)!important}
@@ -28,10 +29,27 @@
       actions?.insertAdjacentElement('beforebegin',note);
     }
 
+    const syncBookingReminderUi=()=>{
+      const emailWrap=portal.querySelector('#ncEmailWrap');
+      const whatsappWrap=portal.querySelector('#ncWhatsappWrap');
+      const confirm=portal.querySelector('#ncConfirm');
+      const selected=portal.querySelector('input[name="ncReminderChannel"]:checked')?.value||'';
+      if(emailWrap)emailWrap.hidden=selected!=='email';
+      if(whatsappWrap)whatsappWrap.hidden=selected!=='whatsapp';
+      if(confirm&&!confirm.disabled)confirm.textContent='Confirmar turno';
+      const summary=portal.querySelector('.nc-channel-summary');
+      if(summary)summary.hidden=true;
+    };
+
+    portal.addEventListener('change',(event)=>{
+      if(event.target?.matches('input[name="ncReminderChannel"],.nc-reminder-consent input[type="checkbox"]'))queueMicrotask(syncBookingReminderUi);
+    });
+
     let controller=null;
     let boundTarget=null;
 
     const bindTarget=()=>{
+      syncBookingReminderUi();
       if(guide.hidden)return;
       const target=portal.querySelector('.clarity-target');
       if(!target||target===boundTarget)return;
@@ -60,7 +78,7 @@
     };
 
     const observer=new MutationObserver(()=>queueMicrotask(bindTarget));
-    observer.observe(portal,{subtree:true,attributes:true,attributeFilter:['class']});
+    observer.observe(portal,{subtree:true,childList:true,attributes:true,attributeFilter:['class','hidden']});
     observer.observe(guide,{attributes:true,attributeFilter:['hidden']});
     bindTarget();
   };
