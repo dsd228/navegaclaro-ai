@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 6
     steps:
-      - name: Wait for Vercel, verify Groq and run real inference scenarios
+      - name: Wait for Vercel, verify Groq, evidence and run real inference scenarios
         shell: bash
         run: |
           set -euo pipefail
@@ -22,22 +22,22 @@ jobs:
             body="$(curl --fail --silent --show-error --max-time 15 "$HEALTH" || true)"
             if [ -n "$body" ]; then
               echo "$body"
-              if HEALTH_JSON="$body" python -c "import json,os,sys; d=json.loads(os.environ['HEALTH_JSON']); ok=d.get('ok') is True and d.get('aiConfigured') is True and d.get('provider') == 'groq' and d.get('version') == '0.4.0'; sys.exit(0 if ok else 1)"; then
-                echo "Production health OK: v0.4.0 + Groq configured"
+              if HEALTH_JSON="$body" python -c "import json,os,sys; d=json.loads(os.environ['HEALTH_JSON']); ok=d.get('ok') is True and d.get('aiConfigured') is True and d.get('provider') == 'groq' and d.get('version') == '0.4.0' and d.get('evidenceConfigured') is True; sys.exit(0 if ok else 1)"; then
+                echo "Production health OK: v0.4.0 + Groq + evidence configured"
                 break
               fi
             fi
             if [ "$attempt" -eq 18 ]; then
-              echo "Production did not become healthy with the expected version in time." >&2
+              echo "Production did not become healthy with Groq and evidence configured in time." >&2
               exit 1
             fi
             sleep 10
           done
 
-          echo "Evidence endpoint contract"
+          echo "Evidence endpoint must be live"
           evidence="$(curl --fail --silent --show-error --max-time 15 "$BASE/api/evidence")"
           echo "$evidence"
-          EVIDENCE_JSON="$evidence" python -c "import json,os,sys; d=json.loads(os.environ['EVIDENCE_JSON']); ok='configured' in d and 'ok' in d; sys.exit(0 if ok else 1)"
+          EVIDENCE_JSON="$evidence" python -c "import json,os,sys; d=json.loads(os.environ['EVIDENCE_JSON']); ok=d.get('ok') is True and d.get('configured') is True and d.get('source') == 'google-sheets'; sys.exit(0 if ok else 1)"
 
           payload_turno='{"goal":"Quiero sacar un turno con dermatología","page":{"title":"Portal de pacientes","elements":[{"id":"nc_1","tag":"select","text":"Especialidad Dermatología Clínica médica Oftalmología"},{"id":"nc_2","tag":"select","text":"Profesional"},{"id":"nc_3","tag":"select","text":"Sede Centro Norte"},{"id":"nc_4","tag":"input","type":"date","text":"Fecha"},{"id":"nc_5","tag":"button","text":"Buscar horarios"}]}}'
           echo "Scenario 1: medical appointment"
