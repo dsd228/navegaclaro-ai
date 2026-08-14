@@ -15,7 +15,7 @@ const participant=`AUTO-${randomId(8)}`;
 const runs=randomBit()===0?
   [{condition:'sin',task:TASKS.A},{condition:'con',task:TASKS.B}]:
   [{condition:'con',task:TASKS.A},{condition:'sin',task:TASKS.B}];
-let index=0;let state=null;let idleTimer=null;let timeout=null;let observer=null;
+let index=0;let state=null;let idleTimer=null;let timeout=null;let observer=null;let pendingSave=null;
 
 startBtn.addEventListener('click',()=>{
   intro.classList.add('hidden');
@@ -25,6 +25,7 @@ startBtn.addEventListener('click',()=>{
 
 function startRun(){
   cleanup();
+  hideTransition();
   const run=runs[index];
   progress.textContent=`Prueba ${index+1} de 2`;
   taskText.textContent=run.task.label;
@@ -95,31 +96,82 @@ async function finish(success){
   state.finished=true;
   clearInterval(idleTimer);clearTimeout(timeout);observer?.disconnect();
   const seconds=Math.max(1,Math.round((performance.now()-state.start)/1000));
-  await fetch('/api/tester-result',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({
-      participant,
-      condition:state.run.condition,
-      taskCode:state.run.task.code,
-      success,
-      timeSeconds:seconds,
-      errors:state.errors,
-      help:state.help,
-      notes:`AUTO_TEST; idle15s=${state.idle}; guideUses=${state.guideUses}`
-    })
-  }).catch(()=>{});
+  pendingSave={
+    participant,
+    condition:state.run.condition,
+    taskCode:state.run.task.code,
+    success,
+    timeSeconds:seconds,
+    errors:state.errors,
+    help:state.help,
+    notes:`AUTO_TEST; idle15s=${state.idle}; guideUses=${state.guideUses}`
+  };
+
+  showSaving();
+  const saved=await saveResult(pendingSave);
+  if(!saved){showSaveError();return;}
+  pendingSave=null;
+  advanceAfterSavedRun();
+}
+
+async function saveResult(payload){
+  for(let attempt=1;attempt<=3;attempt++){
+    try{
+      const response=await fetch('/api/tester-result',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(payload),
+        cache:'no-store'
+      });
+      const data=await response.json().catch(()=>({}));
+      if(response.ok&&data.ok===true&&data.stored!==false)return true;
+    }catch{}
+    if(attempt<3)await wait(900*attempt);
+  }
+  return false;
+}
+
+async function retryPendingSave(){
+  if(!pendingSave)return;
+  showSaving('Reintentando guardado…');
+  const saved=await saveResult(pendingSave);
+  if(!saved){showSaveError();return;}
+  pendingSave=null;
+  advanceAfterSavedRun();
+}
+
+function advanceAfterSavedRun(){
   index++;
   if(index>=runs.length){
+    hideTransition();
     taskbar.hidden=true;
     frame.src='about:blank';
+    const panel=done.querySelector('.panel');
+    if(panel)panel.innerHTML=`<h2>Prueba terminada</h2><p>Las dos pruebas se guardaron correctamente en la evidencia del proyecto.</p><small>Código anónimo: ${participant}</small>`;
     done.classList.remove('hidden');
     return;
   }
-  transition.classList.remove('hidden');
-  setTimeout(()=>{transition.classList.add('hidden');startRun();},1200);
+  showNextTransition();
+  setTimeout(()=>{hideTransition();startRun();},1200);
 }
 
+function showSaving(label='Guardando resultado…'){
+  transition.innerHTML=`<div class="panel"><div class="spinner"></div><h2>${label}</h2><p>Esperá un momento. La prueba continúa cuando el registro quede confirmado.</p></div>`;
+  transition.classList.remove('hidden');
+}
+
+function showSaveError(){
+  transition.innerHTML=`<div class="panel"><h2>No pudimos guardar esta prueba</h2><p>No cierres esta pestaña. Tus datos de esta tarea siguen en memoria y podemos reintentar sin repetirla.</p><button class="start" id="retrySaveBtn" type="button">Reintentar guardado</button><small>La prueba no se marcará como terminada hasta que Google Sheets confirme el registro.</small></div>`;
+  transition.classList.remove('hidden');
+  transition.querySelector('#retrySaveBtn')?.addEventListener('click',retryPendingSave,{once:true});
+}
+
+function showNextTransition(){
+  transition.innerHTML='<div class="panel"><div class="spinner"></div><h2>Preparando la siguiente tarea…</h2><p>No tenés que completar ningún formulario.</p></div>';
+  transition.classList.remove('hidden');
+}
+function hideTransition(){transition.classList.add('hidden');}
+function wait(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
 function cleanup(){clearInterval(idleTimer);clearTimeout(timeout);observer?.disconnect();state=null;}
 function randomId(n){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';const a=new Uint8Array(n);crypto.getRandomValues(a);return[...a].map(x=>chars[x%chars.length]).join('');}
 function randomBit(){const a=new Uint8Array(1);crypto.getRandomValues(a);return a[0]%2;}
