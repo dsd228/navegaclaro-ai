@@ -9,9 +9,30 @@ const taskHint=document.querySelector('#taskHint');
 const startBtn=document.querySelector('#startBtn');
 
 const TASKS={
-  A:{code:'A',specialty:'Dermatología',professional:'Dra. Paula Gómez',label:'Encontrá los próximos horarios disponibles de Dermatología con la Dra. Paula Gómez.'},
-  B:{code:'B',specialty:'Oftalmología',professional:'Dr. Martín Ruiz',label:'Encontrá los próximos horarios disponibles de Oftalmología con el Dr. Martín Ruiz.'}
+  A:{
+    code:'A',
+    specialty:'Dermatología',
+    professional:'Dra. Paula Gómez',
+    location:'Norte',
+    dateText:'20 de agosto',
+    time:'10:00',
+    channel:'whatsapp',
+    label:'Reservá un turno de Dermatología con la Dra. Paula Gómez, sede Norte, para el 20 de agosto a las 10:00 y dejá elegidos los recordatorios por WhatsApp.',
+    goal:'Quiero reservar un turno de Dermatología con la Dra. Paula Gómez en sede Norte el 20 de agosto a las 10:00 y recibir recordatorios por WhatsApp.'
+  },
+  B:{
+    code:'B',
+    specialty:'Oftalmología',
+    professional:'Dr. Martín Ruiz',
+    location:'Norte',
+    dateText:'20 de agosto',
+    time:'14:30',
+    channel:'email',
+    label:'Reservá un turno de Oftalmología con el Dr. Martín Ruiz, sede Norte, para el 20 de agosto a las 14:30 y dejá elegidos los recordatorios por Email.',
+    goal:'Quiero reservar un turno de Oftalmología con el Dr. Martín Ruiz en sede Norte el 20 de agosto a las 14:30 y recibir recordatorios por Email.'
+  }
 };
+
 const participant=`AUTO-${randomId(8)}`;
 const runs=randomBit()===0?
   [{condition:'sin',task:TASKS.A},{condition:'con',task:TASKS.B}]:
@@ -66,8 +87,8 @@ function startRun(){
   taskText.textContent=run.task.label;
   if(taskHint){
     taskHint.textContent=run.condition==='con'
-      ?'Usá NavegaClaro: primero tocá “Mostrarme qué tocar” y seguí la guía para completar la tarea.'
-      :'Hacé la tarea usando solamente el portal, como lo harías normalmente.';
+      ?'Usá NavegaClaro para orientarte. Podés tocar “Mostrarme qué tocar” nuevamente cuando aparezcan nuevos controles. No completes datos personales ni confirmes el turno.'
+      :'Hacé la tarea usando solamente el portal, como lo harías normalmente. No completes datos personales ni confirmes el turno.';
   }
   frame.src=`/tester-app.html?condition=${encodeURIComponent(run.condition)}&task=${run.task.code}&v=${Date.now()}`;
   frame.addEventListener('load',()=>{
@@ -81,38 +102,8 @@ function configure(run){
   const win=frame.contentWindow;
   if(!doc||!win)return;
   const goal=doc.querySelector('#goalInput');
-  if(goal)goal.value=`Quiero encontrar horarios de ${run.task.specialty} con ${run.task.professional}`;
-  if(run.condition==='con')lockPortalUntilGuide(doc);
+  if(goal)goal.value=run.task.goal;
   try{win.scrollTo({top:0,left:0,behavior:'auto'});}catch{win.scrollTo(0,0);}
-}
-
-function lockPortalUntilGuide(doc){
-  const portal=doc.querySelector('#portal');
-  if(!portal)return;
-  portal.setAttribute('inert','');
-  portal.setAttribute('aria-disabled','true');
-  portal.style.pointerEvents='none';
-  portal.style.opacity='.55';
-  portal.style.filter='grayscale(.2)';
-  const note=doc.createElement('p');
-  note.id='testerGuideRequirement';
-  note.textContent='Primero activá “Mostrarme qué tocar”. El portal se habilita cuando NavegaClaro prepare la guía.';
-  note.style.margin='10px 0 0';
-  note.style.fontSize='.82rem';
-  note.style.lineHeight='1.45';
-  note.style.color='#b8ff5a';
-  doc.querySelector('#simplifyBtn')?.insertAdjacentElement('afterend',note);
-}
-
-function unlockPortal(doc){
-  const portal=doc.querySelector('#portal');
-  if(!portal)return;
-  portal.removeAttribute('inert');
-  portal.removeAttribute('aria-disabled');
-  portal.style.pointerEvents='';
-  portal.style.opacity='';
-  portal.style.filter='';
-  doc.querySelector('#testerGuideRequirement')?.remove();
 }
 
 function track(run){
@@ -121,40 +112,42 @@ function track(run){
   if(!doc||!win)return;
   state={run,start:performance.now(),last:performance.now(),errors:0,help:0,idle:0,idleOpen:false,guideUses:0,guideShown:false,guideSteps:0,finished:false};
   const touch=()=>{if(!state)return;state.last=performance.now();state.idleOpen=false;};
+
   doc.addEventListener('click',e=>{
     if(!state||state.finished)return;
     touch();
     if(e.target.closest('.portal-chat'))state.help++;
     if(e.target.closest('#simplifyBtn'))state.guideUses++;
     if(e.target.closest('#nextStep,#prevStep'))state.guideSteps++;
+    const slot=e.target.closest('.nc-slot');
+    if(slot&&!slotMatchesTask(slot,run.task))state.errors++;
     check();
   },true);
+
   doc.addEventListener('change',e=>{
     if(!state||state.finished)return;
     touch();
     const el=e.target;
     if(el.id==='especialidad'&&el.value&&el.value!==run.task.specialty)state.errors++;
     if(el.id==='profesional'&&el.value&&el.value!==run.task.professional)state.errors++;
+    if(el.name==='ncReminderChannel'&&el.checked&&el.value!==run.task.channel)state.errors++;
     check();
   },true);
+
   doc.addEventListener('scroll',touch,{passive:true,capture:true});
   observer=new win.MutationObserver(()=>{
     if(!state||state.finished)return;
-    if(run.condition==='con'){
-      const guide=doc.querySelector('#guide');
-      if(guide&&!guide.hidden){
-        state.guideShown=true;
-        unlockPortal(doc);
-      }
-    }
+    const guide=doc.querySelector('#guide');
+    if(run.condition==='con'&&guide&&!guide.hidden)state.guideShown=true;
     check();
   });
-  observer.observe(doc.body,{subtree:true,childList:true,attributes:true,attributeFilter:['hidden','aria-pressed']});
+  observer.observe(doc.body,{subtree:true,childList:true,attributes:true,attributeFilter:['hidden','aria-pressed','checked']});
+
   idleTimer=setInterval(()=>{
     if(!state||state.finished)return;
     if(performance.now()-state.last>=15000&&!state.idleOpen){state.idle++;state.idleOpen=true;}
   },1000);
-  timeout=setTimeout(()=>finish(false),180000);
+  timeout=setTimeout(()=>finish(false),240000);
   setTimeout(check,700);
 }
 
@@ -162,16 +155,34 @@ function check(){
   if(!state||state.finished)return;
   const doc=frame.contentDocument;
   if(!doc)return;
+  const task=state.run.task;
   const specialty=doc.querySelector('#especialidad')?.value||'';
   const professional=doc.querySelector('#profesional')?.value||'';
-  const slots=[...doc.querySelectorAll('.nc-slot')].filter(el=>el.offsetParent!==null);
-  const taskReached=specialty===state.run.task.specialty&&professional===state.run.task.professional&&slots.length>0;
+  const selectedSlot=doc.querySelector('.nc-slot[aria-pressed="true"]');
+  const consent=doc.querySelector('.portal-terms input[type="checkbox"]');
+  const channel=doc.querySelector('input[name="ncReminderChannel"]:checked')?.value||'';
+
+  const taskReached=
+    specialty===task.specialty&&
+    professional===task.professional&&
+    Boolean(selectedSlot)&&
+    slotMatchesTask(selectedSlot,task)&&
+    Boolean(consent?.checked)&&
+    channel===task.channel;
+
   const treatmentValid=state.run.condition==='sin'||(state.guideUses>0&&state.guideShown);
   if(taskReached&&treatmentValid){
     setTimeout(()=>{
       if(state&&!state.finished)finish(true);
     },650);
   }
+}
+
+function slotMatchesTask(slot,task){
+  if(!slot)return false;
+  const text=norm(slot.textContent);
+  const day=norm(slot.closest('.nc-day')?.querySelector('.nc-day-title strong')?.textContent||'');
+  return text.includes(norm(task.time))&&text.includes(norm(task.location))&&day.includes(norm(task.dateText));
 }
 
 async function finish(success){
@@ -187,7 +198,7 @@ async function finish(success){
     timeSeconds:seconds,
     errors:state.errors,
     help:state.help,
-    notes:`AUTO_TEST_V2; idle15s=${state.idle}; guideUses=${state.guideUses}; guideShown=${state.guideShown?1:0}; guideSteps=${state.guideSteps}`
+    notes:`AUTO_TEST_V3; idle15s=${state.idle}; guideUses=${state.guideUses}; guideShown=${state.guideShown?1:0}; guideSteps=${state.guideSteps}; target=${state.run.task.time}-${state.run.task.location}-${state.run.task.channel}`
   };
 
   showSaving();
@@ -256,5 +267,6 @@ function showNextTransition(){
 function hideTransition(){transition.classList.add('hidden');}
 function wait(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
 function cleanup(){clearInterval(idleTimer);clearTimeout(timeout);observer?.disconnect();state=null;}
+function norm(value){return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();}
 function randomId(n){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';const a=new Uint8Array(n);crypto.getRandomValues(a);return[...a].map(x=>chars[x%chars.length]).join('');}
 function randomBit(){const a=new Uint8Array(1);crypto.getRandomValues(a);return a[0]%2;}
