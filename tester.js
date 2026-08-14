@@ -15,13 +15,47 @@ const participant=`AUTO-${randomId(8)}`;
 const runs=randomBit()===0?
   [{condition:'sin',task:TASKS.A},{condition:'con',task:TASKS.B}]:
   [{condition:'con',task:TASKS.A},{condition:'sin',task:TASKS.B}];
-let index=0;let state=null;let idleTimer=null;let timeout=null;let observer=null;let pendingSave=null;
+let index=0;let state=null;let idleTimer=null;let timeout=null;let observer=null;let pendingSave=null;let storageReady=false;let checkingStorage=false;
 
-startBtn.addEventListener('click',()=>{
+const storageNote=document.createElement('small');
+storageNote.id='storageNote';
+startBtn.insertAdjacentElement('afterend',storageNote);
+startBtn.disabled=true;
+startBtn.textContent='Verificando registro…';
+checkStorage();
+
+startBtn.addEventListener('click',async()=>{
+  if(!storageReady){await checkStorage();return;}
   intro.classList.add('hidden');
   taskbar.hidden=false;
   startRun();
 });
+
+async function checkStorage(){
+  if(checkingStorage)return false;
+  checkingStorage=true;
+  startBtn.disabled=true;
+  startBtn.textContent='Verificando registro…';
+  storageNote.textContent='Comprobando que la evidencia pueda guardarse antes de empezar.';
+  storageNote.style.color='';
+  try{
+    const response=await fetch('/api/health',{cache:'no-store'});
+    const data=await response.json().catch(()=>({}));
+    storageReady=response.ok&&data.ok===true&&data.evidenceConfigured===true;
+  }catch{storageReady=false;}
+  checkingStorage=false;
+  startBtn.disabled=false;
+  if(storageReady){
+    startBtn.textContent='Comenzar prueba';
+    storageNote.textContent='Registro de evidencia conectado.';
+    storageNote.style.color='#b8ff5a';
+    return true;
+  }
+  startBtn.textContent='Reintentar conexión';
+  storageNote.textContent='La evidencia no está conectada. No iniciamos la prueba para no perder tus resultados.';
+  storageNote.style.color='#ff9b9b';
+  return false;
+}
 
 function startRun(){
   cleanup();
