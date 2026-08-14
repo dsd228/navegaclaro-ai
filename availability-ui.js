@@ -16,11 +16,11 @@
   const CATALOG=[
     {specialty:'Cardiología',professionals:['Dra. Sofía Vega']},
     {specialty:'Clínica médica',professionals:['Dr. Martín Ruiz']},
-    {specialty:'Dermatología',professionals:['Dra. Paula Gómez']},
+    {specialty:'Dermatología',professionals:['Dra. Paula Gómez','Dr. Nicolás Ferrer','Dra. Lucía Herrera']},
     {specialty:'Ginecología',professionals:['Dra. Ana Pérez']},
     {specialty:'Kinesiología',professionals:['Lic. Laura Sosa']},
     {specialty:'Neurología',professionals:['Dr. Bruno Salas']},
-    {specialty:'Oftalmología',professionals:['Dr. Martín Ruiz']},
+    {specialty:'Oftalmología',professionals:['Dr. Martín Ruiz','Dra. Valentina Suárez','Dr. Pablo Castro']},
     {specialty:'Pediatría',professionals:['Dra. Camila López']},
     {specialty:'Traumatología',professionals:['Dr. Ignacio Torres']},
     {specialty:'Urología',professionals:['Dr. Federico Allende']}
@@ -36,12 +36,12 @@
   professional.disabled=true;
 
   const portalHelp=$('.portal-help');
-  if(portalHelp)portalHelp.textContent='Elegí una especialidad y un profesional. Después te mostramos directamente sus próximos días, horarios y sedes disponibles.';
+  if(portalHelp)portalHelp.textContent='Elegí una especialidad y después un profesional. Recién entonces te mostramos sus próximos días, horarios y sedes disponibles.';
 
   if(!$('.nc-booking-intro')){
     const intro=document.createElement('div');
     intro.className='nc-booking-intro';
-    intro.innerHTML='<strong>1. Elegí la especialidad</strong><span>2. Elegí el profesional</span><span>3. Te mostramos los próximos días y horarios disponibles.</span>';
+    intro.innerHTML='<strong>1. Elegí la especialidad</strong><span>2. Elegí un profesional entre los disponibles</span><span>3. Elegí el día, horario y sede.</span><span>4. Si querés recordatorios, elegí el medio.</span>';
     form.before(intro);
   }
 
@@ -61,7 +61,7 @@
   panel.setAttribute('aria-live','polite');
   panel.innerHTML=`
     <p class="nc-slots-title">Próximos turnos disponibles</p>
-    <p class="nc-slots-copy">Elegí especialidad y profesional para verlos automáticamente.</p>
+    <p class="nc-slots-copy">Elegí especialidad y profesional para verlos.</p>
     <div class="nc-days"></div>
     <div class="nc-booking" hidden>
       <p class="nc-booking-summary"></p>
@@ -90,10 +90,7 @@
   specialty.addEventListener('change',()=>{
     fillProfessionals();
     clearSlots();
-    if(professional.options.length===2){
-      professional.selectedIndex=1;
-      searchAvailability();
-    }
+    button.textContent='Buscar horarios';
   });
 
   professional.addEventListener('change',()=>{
@@ -101,7 +98,7 @@
     if(specialty.value&&professional.value)searchAvailability();
   });
 
-  button.textContent='Actualizar horarios';
+  button.textContent='Buscar horarios';
   button.addEventListener('click',()=>{
     if(specialty.value&&professional.value)searchAvailability();
     else showMessage('Elegí una especialidad y después un profesional.','error');
@@ -123,7 +120,7 @@
     $('.nc-slots-copy',panel).textContent=`${specialty.value} · ${professional.value}`;
     button.disabled=true;
     const oldText=button.textContent;
-    button.textContent='Actualizando…';
+    button.textContent='Buscando…';
 
     try{
       const response=await fetch('/api/availability',{
@@ -139,7 +136,7 @@
       if(error?.name!=='AbortError')showMessage(error?.message||'No se pudo consultar la disponibilidad.','error');
     }finally{
       button.disabled=false;
-      button.textContent=oldText||'Actualizar horarios';
+      button.textContent=oldText||'Buscar horarios';
     }
   }
 
