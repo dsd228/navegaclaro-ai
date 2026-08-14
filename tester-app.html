@@ -17,12 +17,19 @@
     body{padding:0!important;overflow-x:hidden}
     .tester-surface{width:100%;max-width:920px;margin:0 auto;padding:0 0 32px}
     .demo-grid{display:block!important;margin:0!important;gap:0!important}
-    .clarity-console{margin:0!important;border-radius:0!important;border-left:0!important;border-right:0!important}
+    .clarity-console{position:static!important;top:auto!important;margin:0!important;border-radius:0!important;border-left:0!important;border-right:0!important;box-shadow:none!important}
     .portal{margin:0!important;border-radius:0!important;border-left:0!important;border-right:0!important}
     html[data-condition="sin"] .clarity-console,
     html[data-condition="sin"] .nc-portal-marker{display:none!important}
     .portal-layout{min-height:0!important}
     .portal-alert{position:static!important}
+    .portal.clarity-active .portal-alert,
+    .portal.clarity-active .portal-banner,
+    .portal.clarity-active .portal-side,
+    .portal.clarity-active .portal-chat,
+    .portal.clarity-active .portal-breadcrumb,
+    .portal.clarity-active .portal-nav{opacity:1!important;filter:none!important}
+    .clarity-target{box-shadow:0 0 0 7px rgba(184,255,90,.24)!important;outline:4px solid #8edb2f!important;outline-offset:3px!important}
     @media(max-width:720px){
       .tester-surface{max-width:none}
       .portal-layout{display:block!important}
