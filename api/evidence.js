@@ -17,6 +17,8 @@ async function getSummary(res){
   if(!url||!secret)return res.status(200).json({ok:true,configured:false,source:'pending',metrics:null});
   let status=0;
   let contentType='';
+  let finalHost='';
+  let redirected=false;
   try{
     const target=new URL(url);
     target.searchParams.set('action','summary');
@@ -24,6 +26,8 @@ async function getSummary(res){
     const response=await fetch(target,{method:'GET',redirect:'follow',headers:{Accept:'application/json'},signal:AbortSignal.timeout(9000)});
     status=response.status;
     contentType=String(response.headers.get('content-type')||'').slice(0,80);
+    redirected=Boolean(response.redirected);
+    try{finalHost=new URL(response.url).hostname;}catch{}
     const raw=await response.text();
     if(!response.ok)throw new Error(`Sheets HTTP ${response.status}`);
     let data;
@@ -32,7 +36,7 @@ async function getSummary(res){
       return res.status(200).json({
         ok:false,configured:true,source:'google-sheets',metrics:null,
         error:'Apps Script rechazó la lectura.',
-        diagnostic:{status,contentType,upstreamError:text(data?.error,120)}
+        diagnostic:{status,contentType,finalHost,redirected,upstreamError:text(data?.error,120)}
       });
     }
     return res.status(200).json({ok:true,configured:true,source:'google-sheets',metrics:sanitizeMetrics(data?.metrics||data)});
@@ -41,7 +45,7 @@ async function getSummary(res){
     return res.status(200).json({
       ok:false,configured:true,source:'google-sheets',metrics:null,
       error:'No se pudo leer la evidencia.',
-      diagnostic:{status,contentType,reason:text(error?.message||error,120)}
+      diagnostic:{status,contentType,finalHost,redirected,reason:text(error?.message||error,120)}
     });
   }
 }
@@ -63,10 +67,14 @@ async function writeEvidence(req,res){
   const payload=sanitizePayload(kind,body.payload||{});
   let status=0;
   let contentType='';
+  let finalHost='';
+  let redirected=false;
   try{
     const response=await fetch(url,{method:'POST',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({secret,kind,payload}),signal:AbortSignal.timeout(9000)});
     status=response.status;
     contentType=String(response.headers.get('content-type')||'').slice(0,80);
+    redirected=Boolean(response.redirected);
+    try{finalHost=new URL(response.url).hostname;}catch{}
     const raw=await response.text();
     if(!response.ok)throw new Error(`Sheets HTTP ${response.status}`);
     let data;
@@ -75,7 +83,7 @@ async function writeEvidence(req,res){
     return res.status(200).json({ok:true,configured:true,source:'google-sheets'});
   }catch(error){
     console.error('Evidence write failed',error?.message||error);
-    return res.status(502).json({ok:false,configured:true,error:'No se pudo registrar la evidencia.',diagnostic:{status,contentType,reason:text(error?.message||error,120)}});
+    return res.status(502).json({ok:false,configured:true,error:'No se pudo registrar la evidencia.',diagnostic:{status,contentType,finalHost,redirected,reason:text(error?.message||error,120)}});
   }
 }
 
