@@ -29,16 +29,20 @@
       actions?.insertAdjacentElement('beforebegin',note);
     }
 
+    const setHidden=(element,value)=>{
+      if(element&&element.hidden!==value)element.hidden=value;
+    };
+
     const syncBookingReminderUi=()=>{
       const emailWrap=portal.querySelector('#ncEmailWrap');
       const whatsappWrap=portal.querySelector('#ncWhatsappWrap');
       const confirm=portal.querySelector('#ncConfirm');
       const selected=portal.querySelector('input[name="ncReminderChannel"]:checked')?.value||'';
-      if(emailWrap)emailWrap.hidden=selected!=='email';
-      if(whatsappWrap)whatsappWrap.hidden=selected!=='whatsapp';
-      if(confirm&&!confirm.disabled)confirm.textContent='Confirmar turno';
+      setHidden(emailWrap,selected!=='email');
+      setHidden(whatsappWrap,selected!=='whatsapp');
+      if(confirm&&!confirm.disabled&&confirm.textContent!=='Confirmar turno')confirm.textContent='Confirmar turno';
       const summary=portal.querySelector('.nc-channel-summary');
-      if(summary)summary.hidden=true;
+      setHidden(summary,true);
     };
 
     portal.addEventListener('change',(event)=>{
@@ -47,10 +51,16 @@
 
     let controller=null;
     let boundTarget=null;
+    let bindScheduled=false;
 
     const bindTarget=()=>{
-      syncBookingReminderUi();
-      if(guide.hidden)return;
+      bindScheduled=false;
+      if(guide.hidden){
+        controller?.abort();
+        controller=null;
+        boundTarget=null;
+        return;
+      }
       const target=portal.querySelector('.clarity-target');
       if(!target||target===boundTarget)return;
       controller?.abort();
@@ -77,9 +87,22 @@
       }
     };
 
-    const observer=new MutationObserver(()=>queueMicrotask(bindTarget));
-    observer.observe(portal,{subtree:true,childList:true,attributes:true,attributeFilter:['class','hidden']});
-    observer.observe(guide,{attributes:true,attributeFilter:['hidden']});
+    const scheduleBind=()=>{
+      if(bindScheduled)return;
+      bindScheduled=true;
+      queueMicrotask(bindTarget);
+    };
+
+    // Observe only the class change used to mark the current target.
+    // Do not observe `hidden`: this script itself updates hidden state in the booking UI.
+    const targetObserver=new MutationObserver(scheduleBind);
+    targetObserver.observe(portal,{subtree:true,attributes:true,attributeFilter:['class']});
+
+    // The guide's own visibility is safe to observe because bindTarget never changes it.
+    const guideObserver=new MutationObserver(scheduleBind);
+    guideObserver.observe(guide,{attributes:true,attributeFilter:['hidden']});
+
+    syncBookingReminderUi();
     bindTarget();
   };
 
