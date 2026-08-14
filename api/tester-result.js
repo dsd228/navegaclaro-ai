@@ -1,5 +1,8 @@
 const RATE_WINDOW_MS=60_000;const RATE_MAX=12;const buckets=globalThis.__ncTesterBuckets||new Map();globalThis.__ncTesterBuckets=buckets;
-const TASKS={A:'Dermatología · Dra. Paula Gómez · próximos horarios',B:'Oftalmología · Dr. Martín Ruiz · próximos horarios'};
+const TASKS={
+  A:'Dermatología · Dra. Paula Gómez · Norte · 20/08 10:00 · WhatsApp',
+  B:'Oftalmología · Dr. Martín Ruiz · Norte · 20/08 14:30 · Email'
+};
 
 export default async function handler(req,res){
   res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','no-referrer');
@@ -13,9 +16,6 @@ export default async function handler(req,res){
   if(!['sin','con'].includes(condition)||!TASKS[taskCode])return res.status(400).json({error:'Prueba inválida'});
   const payload={participant,condition,task:TASKS[taskCode],success:Boolean(body.success),timeSeconds:bounded(body.timeSeconds,1,600),errors:bounded(body.errors,0,50),help:bounded(body.help,0,50),ease:null,quote:'',notes:redact(String(body.notes||'').slice(0,400))};
   try{
-    // Use the long-standing `test` kind for backwards compatibility with an
-    // already-published Apps Script deployment. Current Code.gs accepts both
-    // `test` and `auto_test`, but older /exec versions may only know `test`.
     const response=await fetch(url,{method:'POST',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({secret,kind:'test',payload}),signal:AbortSignal.timeout(9000)});
     if(!response.ok)throw new Error(`Sheets ${response.status}`);
     const data=await response.json();
