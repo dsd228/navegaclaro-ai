@@ -5,6 +5,7 @@ const done=document.querySelector('#done');
 const taskbar=document.querySelector('#taskbar');
 const progress=document.querySelector('#progress');
 const taskText=document.querySelector('#taskText');
+const taskHint=document.querySelector('#taskHint');
 const startBtn=document.querySelector('#startBtn');
 
 const TASKS={
@@ -63,6 +64,11 @@ function startRun(){
   const run=runs[index];
   progress.textContent=`Prueba ${index+1} de 2`;
   taskText.textContent=run.task.label;
+  if(taskHint){
+    taskHint.textContent=run.condition==='con'
+      ?'Usá NavegaClaro: primero tocá “Mostrarme qué tocar” y seguí la guía para completar la tarea.'
+      :'Hacé la tarea usando solamente el portal, como lo harías normalmente.';
+  }
   frame.src=`/tester-app.html?condition=${encodeURIComponent(run.condition)}&task=${run.task.code}&v=${Date.now()}`;
   frame.addEventListener('load',()=>{
     configure(run);
@@ -76,20 +82,51 @@ function configure(run){
   if(!doc||!win)return;
   const goal=doc.querySelector('#goalInput');
   if(goal)goal.value=`Quiero encontrar horarios de ${run.task.specialty} con ${run.task.professional}`;
+  if(run.condition==='con')lockPortalUntilGuide(doc);
   try{win.scrollTo({top:0,left:0,behavior:'auto'});}catch{win.scrollTo(0,0);}
+}
+
+function lockPortalUntilGuide(doc){
+  const portal=doc.querySelector('#portal');
+  if(!portal)return;
+  portal.setAttribute('inert','');
+  portal.setAttribute('aria-disabled','true');
+  portal.style.pointerEvents='none';
+  portal.style.opacity='.55';
+  portal.style.filter='grayscale(.2)';
+  const note=doc.createElement('p');
+  note.id='testerGuideRequirement';
+  note.textContent='Primero activá “Mostrarme qué tocar”. El portal se habilita cuando NavegaClaro prepare la guía.';
+  note.style.margin='10px 0 0';
+  note.style.fontSize='.82rem';
+  note.style.lineHeight='1.45';
+  note.style.color='#b8ff5a';
+  doc.querySelector('#simplifyBtn')?.insertAdjacentElement('afterend',note);
+}
+
+function unlockPortal(doc){
+  const portal=doc.querySelector('#portal');
+  if(!portal)return;
+  portal.removeAttribute('inert');
+  portal.removeAttribute('aria-disabled');
+  portal.style.pointerEvents='';
+  portal.style.opacity='';
+  portal.style.filter='';
+  doc.querySelector('#testerGuideRequirement')?.remove();
 }
 
 function track(run){
   const doc=frame.contentDocument;
   const win=frame.contentWindow;
   if(!doc||!win)return;
-  state={run,start:performance.now(),last:performance.now(),errors:0,help:0,idle:0,idleOpen:false,guideUses:0,finished:false};
+  state={run,start:performance.now(),last:performance.now(),errors:0,help:0,idle:0,idleOpen:false,guideUses:0,guideShown:false,guideSteps:0,finished:false};
   const touch=()=>{if(!state)return;state.last=performance.now();state.idleOpen=false;};
   doc.addEventListener('click',e=>{
     if(!state||state.finished)return;
     touch();
     if(e.target.closest('.portal-chat'))state.help++;
     if(e.target.closest('#simplifyBtn'))state.guideUses++;
+    if(e.target.closest('#nextStep,#prevStep'))state.guideSteps++;
     check();
   },true);
   doc.addEventListener('change',e=>{
@@ -101,7 +138,17 @@ function track(run){
     check();
   },true);
   doc.addEventListener('scroll',touch,{passive:true,capture:true});
-  observer=new win.MutationObserver(check);
+  observer=new win.MutationObserver(()=>{
+    if(!state||state.finished)return;
+    if(run.condition==='con'){
+      const guide=doc.querySelector('#guide');
+      if(guide&&!guide.hidden){
+        state.guideShown=true;
+        unlockPortal(doc);
+      }
+    }
+    check();
+  });
   observer.observe(doc.body,{subtree:true,childList:true,attributes:true,attributeFilter:['hidden','aria-pressed']});
   idleTimer=setInterval(()=>{
     if(!state||state.finished)return;
@@ -118,7 +165,9 @@ function check(){
   const specialty=doc.querySelector('#especialidad')?.value||'';
   const professional=doc.querySelector('#profesional')?.value||'';
   const slots=[...doc.querySelectorAll('.nc-slot')].filter(el=>el.offsetParent!==null);
-  if(specialty===state.run.task.specialty&&professional===state.run.task.professional&&slots.length>0){
+  const taskReached=specialty===state.run.task.specialty&&professional===state.run.task.professional&&slots.length>0;
+  const treatmentValid=state.run.condition==='sin'||(state.guideUses>0&&state.guideShown);
+  if(taskReached&&treatmentValid){
     setTimeout(()=>{
       if(state&&!state.finished)finish(true);
     },650);
@@ -138,7 +187,7 @@ async function finish(success){
     timeSeconds:seconds,
     errors:state.errors,
     help:state.help,
-    notes:`AUTO_TEST; idle15s=${state.idle}; guideUses=${state.guideUses}`
+    notes:`AUTO_TEST_V2; idle15s=${state.idle}; guideUses=${state.guideUses}; guideShown=${state.guideShown?1:0}; guideSteps=${state.guideSteps}`
   };
 
   showSaving();
