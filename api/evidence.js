@@ -1,10 +1,83 @@
-const RATE_WINDOW_MS=60_000;const RATE_MAX=40;const buckets=globalThis.__navegaClaroEvidenceBuckets||new Map();globalThis.__navegaClaroEvidenceBuckets=buckets;
+const RATE_WINDOW_MS=60_000;
+const RATE_MAX=40;
+const buckets=globalThis.__navegaClaroEvidenceBuckets||new Map();
+globalThis.__navegaClaroEvidenceBuckets=buckets;
 
-export default async function handler(req,res){setCors(res);if(req.method==='OPTIONS')return res.status(204).end();if(req.method==='GET')return getSummary(res);if(req.method==='POST')return writeEvidence(req,res);return res.status(405).json({error:'Method not allowed'});}
+export default async function handler(req,res){
+  setCors(res);
+  if(req.method==='OPTIONS')return res.status(204).end();
+  if(req.method==='GET')return getSummary(res);
+  if(req.method==='POST')return writeEvidence(req,res);
+  return res.status(405).json({error:'Method not allowed'});
+}
 
-async function getSummary(res){const url=process.env.GOOGLE_SHEETS_WEBAPP_URL;const secret=process.env.GOOGLE_SHEETS_SHARED_SECRET;if(!url||!secret)return res.status(200).json({ok:true,configured:false,source:'pending',metrics:null});try{const target=new URL(url);target.searchParams.set('action','summary');target.searchParams.set('secret',secret);const response=await fetch(target,{method:'GET',redirect:'follow',headers:{Accept:'application/json'},signal:AbortSignal.timeout(9000)});if(!response.ok)throw new Error(`Sheets ${response.status}`);const data=await response.json();return res.status(200).json({ok:true,configured:true,source:'google-sheets',metrics:sanitizeMetrics(data?.metrics||data)});}catch(error){console.error('Evidence read failed',error?.message||error);return res.status(200).json({ok:false,configured:true,source:'google-sheets',metrics:null,error:'No se pudo leer la evidencia.'});}}
+async function getSummary(res){
+  const url=process.env.GOOGLE_SHEETS_WEBAPP_URL;
+  const secret=process.env.GOOGLE_SHEETS_SHARED_SECRET;
+  if(!url||!secret)return res.status(200).json({ok:true,configured:false,source:'pending',metrics:null});
+  let status=0;
+  let contentType='';
+  try{
+    const target=new URL(url);
+    target.searchParams.set('action','summary');
+    target.searchParams.set('secret',secret);
+    const response=await fetch(target,{method:'GET',redirect:'follow',headers:{Accept:'application/json'},signal:AbortSignal.timeout(9000)});
+    status=response.status;
+    contentType=String(response.headers.get('content-type')||'').slice(0,80);
+    const raw=await response.text();
+    if(!response.ok)throw new Error(`Sheets HTTP ${response.status}`);
+    let data;
+    try{data=JSON.parse(raw);}catch{throw new Error('Apps Script returned non-JSON');}
+    if(data?.ok===false){
+      return res.status(200).json({
+        ok:false,configured:true,source:'google-sheets',metrics:null,
+        error:'Apps Script rechazó la lectura.',
+        diagnostic:{status,contentType,upstreamError:text(data?.error,120)}
+      });
+    }
+    return res.status(200).json({ok:true,configured:true,source:'google-sheets',metrics:sanitizeMetrics(data?.metrics||data)});
+  }catch(error){
+    console.error('Evidence read failed',error?.message||error);
+    return res.status(200).json({
+      ok:false,configured:true,source:'google-sheets',metrics:null,
+      error:'No se pudo leer la evidencia.',
+      diagnostic:{status,contentType,reason:text(error?.message||error,120)}
+    });
+  }
+}
 
-async function writeEvidence(req,res){if(!allowRequest(req,res))return;const url=process.env.GOOGLE_SHEETS_WEBAPP_URL;const secret=process.env.GOOGLE_SHEETS_SHARED_SECRET;if(!url||!secret)return res.status(503).json({ok:false,configured:false,error:'Google Sheets todavía no está conectado.'});let body;try{body=typeof req.body==='string'?JSON.parse(req.body):(req.body||{});}catch{return res.status(400).json({error:'JSON inválido'});}const kind=String(body.kind||'').trim();if(!['session','test','qa'].includes(kind))return res.status(400).json({error:'Tipo de registro inválido'});if(kind!=='session'){const provided=String(req.headers?.['x-admin-token']||'');const expected=String(process.env.EVIDENCE_ADMIN_TOKEN||'');if(!expected||provided!==expected)return res.status(401).json({error:'Token de Test Lab inválido'});}const payload=sanitizePayload(kind,body.payload||{});try{const response=await fetch(url,{method:'POST',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({secret,kind,payload}),signal:AbortSignal.timeout(9000)});if(!response.ok)throw new Error(`Sheets ${response.status}`);const data=await response.json();if(data?.ok===false)throw new Error(data?.error||'Sheets rejected write');return res.status(200).json({ok:true,configured:true,source:'google-sheets'});}catch(error){console.error('Evidence write failed',error?.message||error);return res.status(502).json({ok:false,configured:true,error:'No se pudo registrar la evidencia.'});}}
+async function writeEvidence(req,res){
+  if(!allowRequest(req,res))return;
+  const url=process.env.GOOGLE_SHEETS_WEBAPP_URL;
+  const secret=process.env.GOOGLE_SHEETS_SHARED_SECRET;
+  if(!url||!secret)return res.status(503).json({ok:false,configured:false,error:'Google Sheets todavía no está conectado.'});
+  let body;
+  try{body=typeof req.body==='string'?JSON.parse(req.body):(req.body||{});}catch{return res.status(400).json({error:'JSON inválido'});}
+  const kind=String(body.kind||'').trim();
+  if(!['session','test','qa'].includes(kind))return res.status(400).json({error:'Tipo de registro inválido'});
+  if(kind!=='session'){
+    const provided=String(req.headers?.['x-admin-token']||'');
+    const expected=String(process.env.EVIDENCE_ADMIN_TOKEN||'');
+    if(!expected||provided!==expected)return res.status(401).json({error:'Token de Test Lab inválido'});
+  }
+  const payload=sanitizePayload(kind,body.payload||{});
+  let status=0;
+  let contentType='';
+  try{
+    const response=await fetch(url,{method:'POST',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({secret,kind,payload}),signal:AbortSignal.timeout(9000)});
+    status=response.status;
+    contentType=String(response.headers.get('content-type')||'').slice(0,80);
+    const raw=await response.text();
+    if(!response.ok)throw new Error(`Sheets HTTP ${response.status}`);
+    let data;
+    try{data=JSON.parse(raw);}catch{throw new Error('Apps Script returned non-JSON');}
+    if(data?.ok===false)throw new Error(text(data?.error||'Sheets rejected write',120));
+    return res.status(200).json({ok:true,configured:true,source:'google-sheets'});
+  }catch(error){
+    console.error('Evidence write failed',error?.message||error);
+    return res.status(502).json({ok:false,configured:true,error:'No se pudo registrar la evidencia.',diagnostic:{status,contentType,reason:text(error?.message||error,120)}});
+  }
+}
 
 function sanitizeMetrics(input={}){const condition=(value={})=>({count:num(value.count),successRate:num(value.successRate),avgTime:num(value.avgTime),errors:num(value.errors),help:num(value.help),avgEase:num(value.avgEase)});return{participants:num(input.participants),testRows:num(input.testRows),without:condition(input.without),with:condition(input.with),sessions:{rows:num(input.sessions?.rows),ai:num(input.sessions?.ai),fallback:num(input.sessions?.fallback),avgLatency:num(input.sessions?.avgLatency),completed:num(input.sessions?.completed)},qa:{rows:num(input.qa?.rows),passed:num(input.qa?.passed)}};}
 function sanitizePayload(kind,p={}){if(kind==='session')return{sessionId:text(p.sessionId,100),event:text(p.event,40),goal:redact(text(p.goal,180)),domain:text(p.domain,120),controls:num(p.controls),steps:num(p.steps),mode:text(p.mode,40),latencyMs:num(p.latencyMs),completed:Boolean(p.completed)};if(kind==='test')return{participant:text(p.participant,40),condition:['sin','con'].includes(String(p.condition))?String(p.condition):'',task:text(p.task,160),success:Boolean(p.success),timeSeconds:num(p.timeSeconds),errors:num(p.errors),help:num(p.help),ease:Math.min(5,Math.max(1,num(p.ease)||1)),quote:redact(text(p.quote,350)),notes:redact(text(p.notes,500))};return{web:text(p.web,180),goal:redact(text(p.goal,180)),result:['pass','fail'].includes(String(p.result))?String(p.result):'fail',steps:num(p.steps),validTargets:Boolean(p.validTargets),latencyMs:num(p.latencyMs),notes:redact(text(p.notes,500))};}
