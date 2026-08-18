@@ -9,6 +9,10 @@
   let root = null;
   let activeTarget = null;
   let rafPending = false;
+  let verificationCleanup = null;
+  let mutationObserver = null;
+  let domVersion = 0;
+  let stepVerified = false;
 
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message?.type === 'CLARITY_RESET') {
@@ -60,8 +64,6 @@
       .slice(0, 450)
       .map((el, order) => ({ el, order, meta: elementMeta(el), score: localRelevance(goal, el) }));
 
-    // En páginas muy grandes conservamos los controles más relacionados con el objetivo,
-    // pero mantenemos su orden real en el DOM para que el recorrido sea coherente.
     const selected = raw.length <= 140
       ? raw
       : raw
@@ -172,7 +174,7 @@
       <section class="claritylayer-panel" role="dialog" aria-label="Guía NavegaClaro" aria-live="polite">
         <div class="claritylayer-head">
           <span class="claritylayer-mark" aria-hidden="true">N</span>
-          <div class="claritylayer-brand"><strong>NavegaClaro</strong><small>Una acción por vez</small></div>
+          <div class="claritylayer-brand"><strong>NavegaClaro</strong><small>Verified Guide · una acción por vez</small></div>
           <button class="claritylayer-close" aria-label="Cerrar NavegaClaro">×</button>
         </div>
         <div class="claritylayer-progress" aria-hidden="true"><span data-cl-progress></span></div>
@@ -180,11 +182,12 @@
         <h2 data-cl-title></h2>
         <p class="claritylayer-target-name" data-cl-target></p>
         <p data-cl-why></p>
+        <p class="claritylayer-verification" data-cl-verification role="status">Esperando la acción indicada.</p>
         <div class="claritylayer-actions">
           <button class="claritylayer-prev">Anterior</button>
-          <button class="claritylayer-next">Siguiente</button>
+          <button class="claritylayer-next" disabled>Esperando acción…</button>
         </div>
-        <p class="claritylayer-control-note">NavegaClaro guía; vos hacés la acción.</p>
+        <p class="claritylayer-control-note">Vos hacés la acción. NavegaClaro sólo avanza cuando puede detectar que ocurrió.</p>
         <div class="claritylayer-live" aria-live="polite" data-cl-live></div>
       </section>`;
 
@@ -192,9 +195,17 @@
     root.querySelector('.claritylayer-close').addEventListener('click', reset);
     root.querySelector('.claritylayer-prev').addEventListener('click', () => showStep(stepIndex - 1));
     root.querySelector('.claritylayer-next').addEventListener('click', () => {
+      if (!stepVerified) return;
       if (stepIndex >= plan.steps.length - 1) reset();
       else showStep(stepIndex + 1);
     });
+
+    mutationObserver = new MutationObserver((records) => {
+      if (records.some((record) => !(record.target instanceof Element && record.target.closest('#claritylayer-root')))) {
+        domVersion += 1;
+      }
+    });
+    if (document.body) mutationObserver.observe(document.body, { childList: true, subtree: true });
 
     window.addEventListener('scroll', scheduleRingUpdate, true);
     window.addEventListener('resize', scheduleRingUpdate, true);
@@ -203,9 +214,11 @@
 
   function showStep(index) {
     if (!plan || !root) return;
+    cleanupVerification();
     stepIndex = Math.max(0, Math.min(index, plan.steps.length - 1));
     const step = plan.steps[stepIndex];
     activeTarget = findTarget(step);
+    stepVerified = false;
 
     root.querySelector('[data-cl-counter]').textContent = `Paso ${stepIndex + 1} de ${plan.steps.length}`;
     const modeText = plan.mode === 'ai'
@@ -217,12 +230,26 @@
     root.querySelector('[data-cl-target]').textContent = step.target_text ? `En la página: ${step.target_text}` : '';
     root.querySelector('[data-cl-why]').textContent = activeTarget
       ? (step.why || plan.summary || '')
-      : `${step.why || ''} El control cambió o ya no está visible; seguí la instrucción y NavegaClaro intentará encontrarlo de nuevo.`.trim();
+      : `${step.why || ''} El control cambió o ya no está visible; no vamos a marcar el paso como cumplido hasta reencontrarlo.`.trim();
     root.querySelector('.claritylayer-prev').disabled = stepIndex === 0;
-    root.querySelector('.claritylayer-next').textContent = stepIndex === plan.steps.length - 1 ? 'Finalizar' : 'Siguiente';
+    const next = root.querySelector('.claritylayer-next');
+    next.disabled = true;
+    next.textContent = 'Esperando acción…';
     root.querySelector('[data-cl-live]').textContent = `Paso ${stepIndex + 1}: ${step.instruction}`;
 
+    const verification = root.querySelector('[data-cl-verification]');
+    const verifier = globalThis.NCStepVerifier;
+    const risk = verifier?.classifyRisk ? verifier.classifyRisk(step) : 'safe';
+    verification.dataset.level = 'waiting';
+    verification.dataset.risk = risk;
+    verification.textContent = risk === 'irreversible'
+      ? 'Acción importante: NavegaClaro no la ejecutará por vos. Hacela personalmente para continuar.'
+      : risk === 'sensitive'
+        ? 'Paso sensible: completalo personalmente. No guardamos el valor del campo.'
+        : 'Esperando la acción indicada.';
+
     if (activeTarget) {
+      installStepVerification(step, activeTarget);
       activeTarget.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
       if (['focus','type','select'].includes(step.action)) setTimeout(() => safeFocus(activeTarget), 300);
       setTimeout(updateRing, 180);
@@ -230,6 +257,79 @@
     } else {
       hideRing();
     }
+  }
+
+  function installStepVerification(step, target) {
+    const verifier = globalThis.NCStepVerifier;
+    const verification = root?.querySelector('[data-cl-verification]');
+    if (!verifier?.snapshot || !verifier?.evaluate || !verification) {
+      verification.textContent = 'El verificador local no está disponible. Este paso no puede avanzar automáticamente.';
+      return;
+    }
+
+    const before = verifier.snapshot(target, { url: location.href, domVersion });
+    const action = String(step.action || 'focus');
+    const eventTypes = action === 'select'
+      ? ['change']
+      : action === 'type'
+        ? ['input', 'change']
+        : action === 'click'
+          ? ['click']
+          : ['focus'];
+
+    let lastEventType = '';
+    let pendingTimer = null;
+
+    const check = (eventType) => {
+      lastEventType = eventType;
+      if (pendingTimer) clearTimeout(pendingTimer);
+      pendingTimer = setTimeout(() => {
+        if (!root || step !== plan?.steps?.[stepIndex]) return;
+        const after = verifier.snapshot(target, {
+          url: location.href,
+          domVersion,
+          active: document.activeElement === target,
+        });
+        const outcome = verifier.evaluate({ step, before, after, eventType: lastEventType });
+        verification.dataset.level = outcome.level;
+        verification.dataset.risk = outcome.risk;
+        verification.textContent = outcome.verified
+          ? `${outcome.level === 'state-verified' ? 'Estado verificado' : 'Acción detectada'} · ${outcome.message}`
+          : outcome.message;
+
+        if (outcome.verified) {
+          stepVerified = true;
+          const next = root.querySelector('.claritylayer-next');
+          next.disabled = false;
+          next.textContent = stepIndex >= plan.steps.length - 1 ? 'Finalizar recorrido' : 'Continuar · paso verificado';
+          root.querySelector('[data-cl-live]').textContent = `Paso ${stepIndex + 1} verificado. ${outcome.message}`;
+        }
+      }, action === 'click' ? 180 : 30);
+    };
+
+    for (const eventType of eventTypes) target.addEventListener(eventType, () => check(eventType), true);
+
+    const handlers = eventTypes.map((eventType) => {
+      const handler = () => check(eventType);
+      return { eventType, handler };
+    });
+
+    for (const { eventType, handler } of handlers) {
+      target.removeEventListener(eventType, () => check(eventType), true);
+      target.addEventListener(eventType, handler, true);
+    }
+
+    verificationCleanup = () => {
+      if (pendingTimer) clearTimeout(pendingTimer);
+      for (const { eventType, handler } of handlers) target.removeEventListener(eventType, handler, true);
+    };
+  }
+
+  function cleanupVerification() {
+    if (verificationCleanup) {
+      try { verificationCleanup(); } catch {}
+    }
+    verificationCleanup = null;
   }
 
   function findTarget(step) {
@@ -288,7 +388,7 @@
   function onKeydown(event) {
     if (!root) return;
     if (event.key === 'Escape') reset();
-    if (event.altKey && event.key === 'ArrowRight' && stepIndex < plan.steps.length - 1) showStep(stepIndex + 1);
+    if (event.altKey && event.key === 'ArrowRight' && stepVerified && stepIndex < plan.steps.length - 1) showStep(stepIndex + 1);
     if (event.altKey && event.key === 'ArrowLeft' && stepIndex > 0) showStep(stepIndex - 1);
   }
 
@@ -353,6 +453,10 @@
   }
 
   function reset() {
+    cleanupVerification();
+    mutationObserver?.disconnect();
+    mutationObserver = null;
+    domVersion = 0;
     window.removeEventListener('scroll', scheduleRingUpdate, true);
     window.removeEventListener('resize', scheduleRingUpdate, true);
     document.removeEventListener('keydown', onKeydown, true);
@@ -362,6 +466,7 @@
     stepIndex = 0;
     activeTarget = null;
     rafPending = false;
+    stepVerified = false;
     for (const el of tagged) {
       try { el.removeAttribute('data-clarity-id'); } catch {}
     }
